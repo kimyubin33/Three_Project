@@ -30,7 +30,6 @@
             height: 100vh;
         }
 
-        /* 3D 캔버스 영역 */
         #webgl-container {
             width: 100%;
             height: 100%;
@@ -40,11 +39,10 @@
             z-index: 1;
         }
 
-        /* 글래스모피즘 UI 패널 */
         .ui-overlay {
             position: absolute;
             z-index: 10;
-            pointer-events: none; /* 3D 드래그 방해 안 함 */
+            pointer-events: none;
             width: 100%;
             height: 100%;
             display: flex;
@@ -54,7 +52,7 @@
         }
 
         .interactive {
-            pointer-events: auto; /* UI 요소는 클릭 가능 */
+            pointer-events: auto;
         }
 
         /* 상단 타이틀 바 */
@@ -79,6 +77,7 @@
             font-weight: 700;
             letter-spacing: -0.025em;
             background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -99,59 +98,113 @@
             font-weight: 600;
         }
 
-        /* 좌측 정보 안내 패널 */
+        /* 좌측 사이드바 */
         .sidebar {
             background: var(--panel-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid var(--border-color);
-            padding: 24px;
+            padding: 22px;
             border-radius: 20px;
-            width: 340px;
+            width: 360px;
+            max-height: calc(100vh - 180px);
+            overflow-y: auto;
             box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
             margin-top: 20px;
             transition: all 0.3s ease;
         }
 
+        /* 사이드바 스크롤바 (살짝만 보이게) */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
         .sidebar h2 {
-            font-size: 1.1rem;
-            margin-bottom: 12px;
+            font-size: 1.05rem;
+            margin-bottom: 6px;
             color: #f3f4f6;
             border-left: 4px solid var(--accent-color);
             padding-left: 8px;
         }
 
+        .sidebar .chapter-sub {
+            font-size: 0.78rem;
+            color: #60a5fa;
+            margin-bottom: 10px;
+            margin-top: 2px;
+            font-weight: 600;
+        }
+
         .sidebar p {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             color: var(--text-muted);
-            line-height: 1.6;
+            line-height: 1.55;
             margin-bottom: 16px;
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin: 14px 0 8px 0;
+            padding-left: 2px;
         }
 
         .object-list {
             list-style: none;
             display: flex;
             flex-direction: column;
-            gap: 8px;
+            gap: 7px;
         }
 
         .object-item {
             background: rgba(255, 255, 255, 0.03);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 10px 14px;
+            padding: 9px 12px;
             border-radius: 8px;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            gap: 8px;
+            transition: background 0.15s ease, border-color 0.15s ease;
         }
 
-        .object-item span.dot {
+        .object-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .object-item .dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
             display: inline-block;
             margin-right: 8px;
+            flex-shrink: 0;
+            box-shadow: 0 0 6px rgba(255, 255, 255, 0.15);
+        }
+
+        .object-item .item-name {
+            color: #e5e7eb;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .object-item .item-status {
+            font-weight: 500;
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-size: 0.74rem;
         }
 
         /* 하단 도움말 바 */
@@ -206,10 +259,9 @@
             letter-spacing: 0.05em;
         }
     </style>
-    <!-- 구글 폰트 추가 -->
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
 
-    <!-- Import Map을 활용한 Three.js 모듈 경로 해석 선언 -->
     <script type="importmap">
         {
             "imports": {
@@ -220,77 +272,32 @@
     </script>
 </head>
 <body>
-    <!-- 로딩 인디케이터 -->
     <div id="loader">
         <div class="spinner"></div>
         <div class="loader-text">Loading 3D Laboratory Scene...</div>
     </div>
 
-    <!-- 3D 뷰포트 컨테이너 -->
     <div id="webgl-container"></div>
 
-    <!-- UI 레이어 -->
     <div class="ui-overlay">
-        <!-- 상단 타이틀 바 -->
         <header class="interactive">
             <div class="logo-group">
                 <h1>Plasmid Transformation Simulator</h1>
                 <p>3D Interactive Laboratory Workspace</p>
             </div>
-            <div class="step-badge">Ch.1 Thawing (해동 단계)</div>
+            <div class="step-badge" id="chapter-badge">Ch.1 Thawing (해동 단계)</div>
         </header>
 
-        <!-- 좌측 상태 정보창 -->
-        <div class="sidebar interactive">
-            <h2>실험 기구 목록</h2>
-            <p>화면에 배치된 구성 요소들은 각각 고유한 물리 속성과 상태 데이터를 바인딩하고 있습니다. 마우스를 드래그하여 시점을 회전할 수 있습니다.</p>
-            
-            <ul class="object-list">
-                <li class="object-item">
-                    <div style="display: flex; align-items: center;">
-                        <span class="dot" style="background-color: #0066cc;"></span>
-                        <span>Ice Box (아이스박스)</span>
-                    </div>
-                    <span style="color: #60a5fa; font-weight: 500;">0℃ 보관</span>
-                </li>
-                <li class="object-item">
-                    <div style="display: flex; align-items: center;">
-                        <span class="dot" style="background-color: #ff3366;"></span>
-                        <span>Tube 1 (Comp. Cell A)</span>
-                    </div>
-                    <span style="color: #ef4444; font-weight: 500;">-80℃ 냉동</span>
-                </li>
-                <li class="object-item">
-                    <div style="display: flex; align-items: center;">
-                        <span class="dot" style="background-color: #9933ff;"></span>
-                        <span>Tube 2 (Comp. Cell B)</span>
-                    </div>
-                    <span style="color: #ef4444; font-weight: 500;">-80℃ 냉동</span>
-                </li>
-                <li class="object-item">
-                    <div style="display: flex; align-items: center;">
-                        <span class="dot" style="background-color: #ff9900;"></span>
-                        <span>Tube 5 (SOC Medium)</span>
-                    </div>
-                    <span style="color: #10b981; font-weight: 500;">25℃ 상온</span>
-                </li>
-                <li class="object-item">
-                    <div style="display: flex; align-items: center;">
-                        <span class="dot" style="background-color: #ffcc00;"></span>
-                        <span>P200 / P1000 피펫</span>
-                    </div>
-                    <span style="color: #a78bfa; font-weight: 500;">모듈 장착</span>
-                </li>
-            </ul>
+        <!-- 사이드바: 내용은 Sidebar.js가 동적으로 채움 -->
+        <div class="sidebar interactive" id="sidebar-mount">
+            <!-- placeholder during initial paint -->
         </div>
     </div>
 
-    <!-- 하단 도움말 바 -->
     <footer>
-        마우스 왼쪽 버튼 드래그: 회전 | 마우스 오른쪽 버튼 드래그: 이동 | 휠 스크롤: 확대/축소 | 각 부품 클릭 시 인터랙션 가능 (Raycaster 준비 완료)
+        마우스 왼쪽 버튼 드래그: 회전 | 마우스 오른쪽 버튼 드래그: 이동 | 휠 스크롤: 확대/축소
     </footer>
 
-    <!-- Three.js 구동을 위한 엔트리 스크립트 로드 -->
     <script type="module" src="./main.js"></script>
 </body>
 </html>

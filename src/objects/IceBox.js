@@ -1,11 +1,11 @@
 // src/objects/IceBox.js
-// 아이스박스 = 파란 플라스틱 박스 + crushed ice (InstancedMesh) + 튜브 슬롯
+// 아이스박스 = 파란 플라스틱 박스 (위가 열림) + crushed ice (InstancedMesh) + 튜브 슬롯
 //
 // 참고 사진 기준 형태:
-//   - 사다리꼴 단면 (위가 약간 넓음)
-//   - 둥근 모서리
-//   - 가장자리에 가로 홈(rim line) 한 줄
-//   - 안에 잘게 부순 얼음이 봉긋하게 쌓여있음
+//   - 위가 열린 통 (오픈탑)
+//   - 사다리꼴 단면 (위가 약간 넓음, 벽 안쪽이 살짝 기울어짐)
+//   - 가장자리에 두꺼운 rim (테두리)
+//   - 안에 잘게 부순 얼음이 봉긋하게 쌓임
 //   - 튜브는 얼음에 깊이 박혀 뚜껑만 노출
 //
 // 좌표계: 박스의 바닥 중심이 로컬 (0, 0, 0).
@@ -14,17 +14,24 @@ import * as THREE from 'three';
 import MicroTube from './MicroTube.js';
 import { TUBE_CONFIG } from '../data/tubeConfig.js';
 
-const BOX_OUTER = { w: 3.2, h: 1.0, d: 2.0 };  // 외부 치수
-const BOX_WALL = 0.18;                          // 벽 두께
-const ICE_COUNT = 450;                          // crushed ice 인스턴스 수
+const BOX = {
+    outerW: 3.2,       // 외부 가로
+    outerD: 2.0,       // 외부 세로(깊이)
+    outerH: 1.0,       // 외부 높이
+    wall: 0.18,        // 벽 두께
+    rimH: 0.12,        // 상단 테두리 두께(높이)
+    rimOverhang: 0.08  // rim이 바깥으로 튀어나오는 정도
+};
+
+const ICE_COUNT = 450;
 
 export default class IceBox extends THREE.Group {
     constructor() {
         super();
         this.name = 'iceBoxGroup';
 
-        this.tubes = {};        // id → MicroTube 인스턴스
-        this.iceMesh = null;    // InstancedMesh 참조
+        this.tubes = {};
+        this.iceMesh = null;
 
         this._buildBoxShell();
         this._buildIce();
@@ -39,98 +46,132 @@ export default class IceBox extends THREE.Group {
     }
 
     _buildBoxShell() {
-        // 파란 플라스틱 재질
-        const plasticMat = new THREE.MeshStandardMaterial({
+        // 파란 플라스틱 재질 (외부)
+        const outerMat = new THREE.MeshStandardMaterial({
             color: 0x1e60ff,
             roughness: 0.55,
             metalness: 0.05
         });
 
-        // === 외부 본체 (사다리꼴 단면을 BoxGeometry로 근사) ===
-        // 아래가 살짝 좁고 위가 넓은 형태를 만들기 위해 두 박스를 겹침
-        // 더 정밀히 하려면 ExtrudeGeometry로 단면 모양을 그릴 수 있지만,
-        // 시각적 차이는 미미하고 단순화 효과가 크므로 BoxGeometry 사용.
+        // 안쪽 면 재질 (살짝 더 어둡게 → 깊이감)
+        const innerMat = new THREE.MeshStandardMaterial({
+            color: 0x144ad9,
+            roughness: 0.7,
+            metalness: 0.03,
+            side: THREE.DoubleSide
+        });
 
-        // 바닥 (살짝 좁음)
-        const bottomGeo = new THREE.BoxGeometry(BOX_OUTER.w - 0.15, 0.08, BOX_OUTER.d - 0.15);
-        const bottom = new THREE.Mesh(bottomGeo, plasticMat);
-        bottom.position.y = 0.04;
-        this.add(bottom);
+        const { outerW, outerD, outerH, wall, rimH, rimOverhang } = BOX;
 
-        // 4면 벽 (위가 살짝 벌어진 사다리꼴 효과를 위해 벽을 살짝 기울임)
-        const wallHeight = BOX_OUTER.h - 0.08;
-        const tiltAngle = 0.06;  // 라디안
+        // === 1. 바닥 ===
+        const floorGeo = new THREE.BoxGeometry(outerW, wall, outerD);
+        const floor = new THREE.Mesh(floorGeo, outerMat);
+        floor.position.y = wall / 2;
+        this.add(floor);
 
-        // 앞/뒤 벽
-        for (const [zSign, name] of [[1, 'wallFront'], [-1, 'wallBack']]) {
-            const wallGeo = new THREE.BoxGeometry(BOX_OUTER.w, wallHeight, BOX_WALL);
-            const wall = new THREE.Mesh(wallGeo, plasticMat);
-            wall.position.set(0, 0.08 + wallHeight / 2, zSign * (BOX_OUTER.d / 2 - BOX_WALL / 2));
-            wall.rotation.x = -zSign * tiltAngle;
-            wall.name = name;
-            this.add(wall);
+        // === 2. 네 벽 (위가 열린 형태) ===
+        // 벽 높이 = 전체 높이 - 바닥 두께 - rim 두께
+        const wallH = outerH - wall - rimH;
+
+        // 전면 / 후면 벽
+        for (const zSign of [1, -1]) {
+            const wallGeo = new THREE.BoxGeometry(outerW, wallH, wall);
+            const wallMesh = new THREE.Mesh(wallGeo, outerMat);
+            wallMesh.position.set(
+                0,
+                wall + wallH / 2,
+                zSign * (outerD / 2 - wall / 2)
+            );
+            this.add(wallMesh);
         }
 
         // 좌/우 벽
-        for (const [xSign, name] of [[1, 'wallRight'], [-1, 'wallLeft']]) {
-            const wallGeo = new THREE.BoxGeometry(BOX_WALL, wallHeight, BOX_OUTER.d);
-            const wall = new THREE.Mesh(wallGeo, plasticMat);
-            wall.position.set(xSign * (BOX_OUTER.w / 2 - BOX_WALL / 2), 0.08 + wallHeight / 2, 0);
-            wall.rotation.z = xSign * tiltAngle;
-            wall.name = name;
-            this.add(wall);
+        for (const xSign of [1, -1]) {
+            const wallGeo = new THREE.BoxGeometry(wall, wallH, outerD - wall * 2);
+            const wallMesh = new THREE.Mesh(wallGeo, outerMat);
+            wallMesh.position.set(
+                xSign * (outerW / 2 - wall / 2),
+                wall + wallH / 2,
+                0
+            );
+            this.add(wallMesh);
         }
 
-        // === 상단 rim (가장자리 테두리, 사진의 가로 홈 라인 효과) ===
-        // 박스 상단 둘레에 약간 더 큰 박스를 띄워서 rim 형태
-        const rimGeo = new THREE.BoxGeometry(BOX_OUTER.w + 0.12, 0.1, BOX_OUTER.d + 0.12);
-        const rim = new THREE.Mesh(rimGeo, plasticMat);
-        rim.position.y = BOX_OUTER.h - 0.02;
-        this.add(rim);
+        // === 3. 상단 rim (테두리) ===
+        // 안쪽이 뚫려있는 액자 형태로 만들기 위해 4개의 막대로 구성
+        const rimY = wall + wallH + rimH / 2;
+        const rimOuterW = outerW + rimOverhang * 2;
+        const rimOuterD = outerD + rimOverhang * 2;
+        const rimThickness = wall + rimOverhang;  // rim의 폭(안에서 바깥까지)
 
-        // rim 아래에 가는 홈 라인 (살짝 어두운 띠)
-        const grooveGeo = new THREE.BoxGeometry(BOX_OUTER.w + 0.05, 0.02, BOX_OUTER.d + 0.05);
-        const grooveMat = new THREE.MeshStandardMaterial({
-            color: 0x0d3a99,
-            roughness: 0.7
-        });
-        const groove = new THREE.Mesh(grooveGeo, grooveMat);
-        groove.position.y = BOX_OUTER.h - 0.12;
-        this.add(groove);
+        // 전면 / 후면 rim
+        for (const zSign of [1, -1]) {
+            const rimGeo = new THREE.BoxGeometry(rimOuterW, rimH, rimThickness);
+            const rimMesh = new THREE.Mesh(rimGeo, outerMat);
+            rimMesh.position.set(
+                0,
+                rimY,
+                zSign * (rimOuterD / 2 - rimThickness / 2)
+            );
+            this.add(rimMesh);
+        }
 
-        // === 박스 내부에 더 어두운 색조 (입체감) ===
-        // 안쪽이 푸르스름한 그림자 영역으로 보이게
-        const innerShadowMat = new THREE.MeshStandardMaterial({
-            color: 0x0a3380,
-            roughness: 0.9,
-            side: THREE.BackSide
-        });
-        const innerShadowGeo = new THREE.BoxGeometry(
-            BOX_OUTER.w - BOX_WALL * 2 - 0.05,
-            BOX_OUTER.h - 0.1,
-            BOX_OUTER.d - BOX_WALL * 2 - 0.05
-        );
-        const innerShadow = new THREE.Mesh(innerShadowGeo, innerShadowMat);
-        innerShadow.position.y = 0.1 + (BOX_OUTER.h - 0.1) / 2;
-        this.add(innerShadow);
+        // 좌/우 rim (가운데 비워둠)
+        for (const xSign of [1, -1]) {
+            const rimGeo = new THREE.BoxGeometry(rimThickness, rimH, rimOuterD - rimThickness * 2);
+            const rimMesh = new THREE.Mesh(rimGeo, outerMat);
+            rimMesh.position.set(
+                xSign * (rimOuterW / 2 - rimThickness / 2),
+                rimY,
+                0
+            );
+            this.add(rimMesh);
+        }
+
+        // === 4. 벽 안쪽 라이닝 (살짝 더 어두운 색조로 깊이감) ===
+        // 4면의 안쪽 면에 평면을 살짝 띄워서 부착
+        const inset = 0.002;  // 벽보다 살짝 안쪽에
+        const innerWallH = wallH + 0.01;
+        const innerY = wall + innerWallH / 2;
+
+        // 전/후 안쪽 면
+        for (const zSign of [1, -1]) {
+            const linGeo = new THREE.PlaneGeometry(outerW - wall * 2, innerWallH);
+            const lin = new THREE.Mesh(linGeo, innerMat);
+            lin.position.set(0, innerY, zSign * (outerD / 2 - wall - inset));
+            lin.rotation.y = zSign === 1 ? Math.PI : 0;
+            this.add(lin);
+        }
+
+        // 좌/우 안쪽 면
+        for (const xSign of [1, -1]) {
+            const linGeo = new THREE.PlaneGeometry(outerD - wall * 2, innerWallH);
+            const lin = new THREE.Mesh(linGeo, innerMat);
+            lin.position.set(xSign * (outerW / 2 - wall - inset), innerY, 0);
+            lin.rotation.y = xSign === 1 ? -Math.PI / 2 : Math.PI / 2;
+            this.add(lin);
+        }
+
+        // 바닥 안쪽 면 (윗면)
+        const floorInnerGeo = new THREE.PlaneGeometry(outerW - wall * 2, outerD - wall * 2);
+        const floorInner = new THREE.Mesh(floorInnerGeo, innerMat);
+        floorInner.rotation.x = -Math.PI / 2;
+        floorInner.position.y = wall + inset;
+        this.add(floorInner);
     }
 
     _buildIce() {
-        // === Crushed Ice (InstancedMesh) ===
-        // 작은 다면체 하나를 만들어 박스 안쪽 영역에 흩뿌림
-        // 봉긋하게 가운데가 솟은 형태를 위해 중심부 밀도를 살짝 높이고
-        // 가운데 y를 더 높게 배치
-
-        const iceGeo = new THREE.IcosahedronGeometry(0.07, 0);  // 저폴리 다면체
+        // 작은 얼음 조각 하나를 만들어 InstancedMesh로 박스 안쪽에 뿌림
+        const iceGeo = new THREE.IcosahedronGeometry(0.07, 0);
         const iceMat = new THREE.MeshPhysicalMaterial({
             color: 0xeaf6ff,
             transparent: true,
-            opacity: 0.78,
-            roughness: 0.25,
+            opacity: 0.82,
+            roughness: 0.2,
             metalness: 0.0,
-            transmission: 0.4,
+            transmission: 0.35,
             thickness: 0.08,
-            ior: 1.31           // 얼음 굴절률
+            ior: 1.31
         });
 
         const iceMesh = new THREE.InstancedMesh(iceGeo, iceMat, ICE_COUNT);
@@ -140,28 +181,24 @@ export default class IceBox extends THREE.Group {
 
         const dummy = new THREE.Object3D();
 
-        // 박스 내부 가용 영역 (벽 안쪽)
-        const innerW = BOX_OUTER.w - BOX_WALL * 2 - 0.2;
-        const innerD = BOX_OUTER.d - BOX_WALL * 2 - 0.2;
-        const iceBaseY = 0.15;    // 얼음이 시작되는 높이 (바닥에서)
-        const iceMaxY = 0.85;     // 가운데 봉우리 최대 높이
+        const innerW = BOX.outerW - BOX.wall * 2 - 0.15;
+        const innerD = BOX.outerD - BOX.wall * 2 - 0.15;
+        const iceBaseY = BOX.wall + 0.05;    // 바닥 바로 위
+        const iceMaxY = BOX.outerH - 0.05;   // rim 살짝 아래
 
         for (let i = 0; i < ICE_COUNT; i++) {
-            // 박스 안쪽 랜덤 위치
             const x = (Math.random() - 0.5) * innerW;
             const z = (Math.random() - 0.5) * innerD;
 
-            // 중심에서 멀수록 낮게 (봉우리 형태)
+            // 중심에서 멀수록 낮게 → 봉우리 형태
             const distFromCenter = Math.sqrt(
                 (x / (innerW / 2)) ** 2 + (z / (innerD / 2)) ** 2
             );
             const heightCurve = Math.max(0, 1 - distFromCenter ** 1.5);
             const yMax = iceBaseY + (iceMaxY - iceBaseY) * heightCurve;
 
-            // 0~yMax 사이에서 랜덤 (얼음이 쌓인 두께)
             const y = iceBaseY + Math.random() * (yMax - iceBaseY);
 
-            // 회전/스케일 랜덤
             const scale = 0.55 + Math.random() * 0.7;
             const rotX = Math.random() * Math.PI * 2;
             const rotY = Math.random() * Math.PI * 2;
@@ -181,19 +218,15 @@ export default class IceBox extends THREE.Group {
     }
 
     _placeTubes() {
-        // 튜브 5개를 얼음 위쪽에 박힌 형태로 배치.
-        // tubeConfig의 position을 기반으로 하되, y는 얼음 위로 살짝만 노출되도록.
+        // 튜브 5개를 얼음 봉우리 위에 박힌 형태로 배치.
+        // 각 튜브의 본체는 얼음 속에 묻히고 뚜껑만 노출되도록 y를 조정.
 
         for (const cfg of TUBE_CONFIG) {
             const tube = new MicroTube(cfg);
 
-            // 박스 로컬 좌표로 변환
-            // config.position은 박스 중심 기준이라 그대로 적용
-            // y는 "얼음에 박힌" 효과: 튜브 본체 대부분 묻히고 뚜껑만 보이게
-            // 튜브의 로컬 원점은 본체 중심이므로, y를 0.55~0.65 정도에 두면
-            // 뚜껑(y_local≈0.17 부근)이 얼음 봉우리 위에 살짝 노출됨
-
-            const buriedY = 0.55 + cfg.position.y;
+            // 튜브 원점은 본체 중심. 본체+뚜껑 길이가 약 0.3 정도라서
+            // y ≈ 0.65 ~ 0.75 정도면 뚜껑이 얼음 봉우리 위에 노출됨
+            const buriedY = BOX.outerH - 0.25 + cfg.position.y;
             tube.position.set(cfg.position.x, buriedY, cfg.position.z);
             tube.rotation.set(cfg.rotation.x, cfg.rotation.y, cfg.rotation.z);
 
@@ -202,15 +235,11 @@ export default class IceBox extends THREE.Group {
         }
     }
 
-    /**
-     * 외부에서 특정 튜브에 접근할 때 사용
-     */
     getTube(id) {
         return this.tubes[id];
     }
 
     update(deltaMs) {
-        // 각 튜브의 update 호출 (해동 진행 등)
         for (const id in this.tubes) {
             this.tubes[id].update(deltaMs);
         }
