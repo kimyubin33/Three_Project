@@ -1,85 +1,37 @@
-import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import ThawingScene from './thawingScene.js';
+// main.js
+// 애플리케이션 엔트리 포인트. 짧고 명확하게 유지.
 
-let container;
-let camera;
-let renderer;
-let controls;
-let currentSceneModule;
-const clock = new THREE.Clock();
+import SceneManager from './src/core/SceneManager.js';
+import ThawingScene from './src/scenes/ThawingScene.js';
 
-function init() {
-    container = document.getElementById('webgl-container');
+function bootstrap() {
+    const container = document.getElementById('webgl-container');
     if (!container) {
-        console.error('WebGL container was not found.');
+        console.error('webgl-container element not found');
         return;
     }
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.0;
-    container.appendChild(renderer.domElement);
+    // 1) 씬 매니저 생성 (Three.js 인프라)
+    const sceneManager = new SceneManager(container);
 
-    currentSceneModule = new ThawingScene();
+    // 2) 현재 챕터 씬 로드
+    const thawing = new ThawingScene();
+    sceneManager.setScene(thawing);
 
-    camera = new THREE.PerspectiveCamera(
-        45,
-        container.clientWidth / container.clientHeight,
-        0.1,
-        100
-    );
-    camera.position.set(0, 6, 8);
-
-    controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.maxPolarAngle = Math.PI / 2 - 0.05;
-    controls.minDistance = 3;
-    controls.maxDistance = 15;
-    controls.target.set(0, 0.5, 0);
-    controls.update();
-
-    window.addEventListener('resize', onWindowResize);
-
+    // 3) 로더 페이드아웃
     setTimeout(() => {
         const loader = document.getElementById('loader');
-        if (!loader) return;
-
-        loader.style.opacity = '0';
-        setTimeout(() => {
-            loader.style.display = 'none';
-        }, 500);
+        if (loader) {
+            loader.style.opacity = '0';
+            setTimeout(() => { loader.style.display = 'none'; }, 500);
+        }
     }, 400);
 
-    animate();
+    // 4) 렌더 루프 시작
+    sceneManager.start();
+
+    // 개발용: 콘솔에서 접근하기 쉽도록 전역 노출
+    window.__app = { sceneManager, thawing };
 }
 
-function animate() {
-    requestAnimationFrame(animate);
-
-    const elapsedTime = clock.getElapsedTime();
-    controls.update();
-
-    if (currentSceneModule && typeof currentSceneModule.update === 'function') {
-        currentSceneModule.update(elapsedTime * 1000);
-    }
-
-    if (currentSceneModule) {
-        renderer.render(currentSceneModule.getScene(), camera);
-    }
-}
-
-function onWindowResize() {
-    if (!container || !camera || !renderer) return;
-
-    camera.aspect = container.clientWidth / container.clientHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(container.clientWidth, container.clientHeight);
-}
-
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', bootstrap);
