@@ -1,6 +1,7 @@
 // main.js
 // 애플리케이션 엔트리 포인트.
 
+import DialPanel from './src/ui/DialPanel.js';
 import SceneManager from './src/core/SceneManager.js';
 import InteractionController from './src/core/InteractionController.js';
 import AppState from './src/core/AppState.js';
@@ -27,6 +28,7 @@ function bootstrap() {
     const sidebar = new Sidebar('#sidebar-mount');
     const chapterNav = new ChapterNav('#chapter-nav-mount');
     const tooltip = new Tooltip();
+    const dialPanel = new DialPanel();
 
     // === 4) 인터랙션 ===
     const interaction = new InteractionController(
@@ -61,8 +63,9 @@ function bootstrap() {
             container.style.cursor = '';
         },
         onClick: (target) => {
-            console.log('[click]', target.displayName, target.type);
-            // 나중에 챕터별 상호작용 핸들러를 여기서 분기
+            if (target.type === 'pipette') {
+                dialPanel.open(target.root);
+            }
         }
     });
 
@@ -98,6 +101,7 @@ function bootstrap() {
         sidebar,
         chapterNav,
         tooltip,
+        dialPanel,
         interaction,
         AppState,
         setChapter: (n) => AppState.set('chapter', n)
