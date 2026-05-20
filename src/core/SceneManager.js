@@ -1,6 +1,5 @@
 // src/core/SceneManager.js
 // Three.js의 Scene/Camera/Renderer/조명/바닥 등 공통 인프라.
-// 챕터별 씬은 ThawingScene 등이 이 매니저에게 자신을 넘겨주는 식으로 동작.
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
@@ -9,7 +8,10 @@ export default class SceneManager {
     constructor(container) {
         this.container = container;
         this.clock = new THREE.Clock();
-        this.currentScene = null;  // 현재 활성 챕터 씬 (ThawingScene 등)
+        this.currentScene = null;
+
+        // 매 프레임 호출할 외부 콜백들 (InteractionController.update 등)
+        this._updateCallbacks = [];
 
         this._initRenderer();
         this._initCamera();
@@ -57,26 +59,31 @@ export default class SceneManager {
         });
     }
 
-    /**
-     * 챕터 씬 설정. 챕터 객체는 .scene (THREE.Scene)을 노출해야 함.
-     */
     setScene(chapterScene) {
         this.currentScene = chapterScene;
     }
 
     /**
-     * 메인 애니메이션 루프
+     * 매 프레임 호출할 콜백 추가. main.js에서 InteractionController.update() 등을 등록.
      */
+    addUpdateCallback(cb) {
+        this._updateCallbacks.push(cb);
+    }
+
     start() {
         const animate = () => {
             requestAnimationFrame(animate);
             const deltaMs = this.clock.getDelta() * 1000;
             this.controls.update();
 
+            // 외부 콜백 호출
+            for (const cb of this._updateCallbacks) {
+                cb(deltaMs);
+            }
+
             if (this.currentScene && typeof this.currentScene.update === 'function') {
                 this.currentScene.update(deltaMs);
             }
-
             if (this.currentScene && this.currentScene.scene) {
                 this.renderer.render(this.currentScene.scene, this.camera);
             }

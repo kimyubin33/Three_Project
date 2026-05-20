@@ -1,26 +1,17 @@
 // src/objects/IceBox.js
 // 아이스박스 = 파란 플라스틱 박스 (위가 열림) + crushed ice (InstancedMesh) + 튜브 슬롯
-//
-// 참고 사진 기준 형태:
-//   - 위가 열린 통 (오픈탑)
-//   - 사다리꼴 단면 (위가 약간 넓음, 벽 안쪽이 살짝 기울어짐)
-//   - 가장자리에 두꺼운 rim (테두리)
-//   - 안에 잘게 부순 얼음이 봉긋하게 쌓임
-//   - 튜브는 얼음에 깊이 박혀 뚜껑만 노출
-//
-// 좌표계: 박스의 바닥 중심이 로컬 (0, 0, 0).
 
 import * as THREE from 'three';
 import MicroTube from './MicroTube.js';
 import { TUBE_CONFIG } from '../data/tubeConfig.js';
 
 const BOX = {
-    outerW: 3.2,       // 외부 가로
-    outerD: 2.0,       // 외부 세로(깊이)
-    outerH: 1.0,       // 외부 높이
-    wall: 0.18,        // 벽 두께
-    rimH: 0.12,        // 상단 테두리 두께(높이)
-    rimOverhang: 0.08  // rim이 바깥으로 튀어나오는 정도
+    outerW: 3.2,
+    outerD: 2.0,
+    outerH: 1.0,
+    wall: 0.18,
+    rimH: 0.12,
+    rimOverhang: 0.08
 };
 
 const ICE_COUNT = 450;
@@ -29,9 +20,12 @@ export default class IceBox extends THREE.Group {
     constructor() {
         super();
         this.name = 'iceBoxGroup';
+        this.userData.tubeName = 'Ice Box (아이스박스)';
+        this.userData.isInteractive = true;
 
         this.tubes = {};
         this.iceMesh = null;
+        this.shellMeshes = [];  // 박스 외형 mesh들 (튜브와 분리해서 hover 대상으로)
 
         this._buildBoxShell();
         this._buildIce();
@@ -46,14 +40,11 @@ export default class IceBox extends THREE.Group {
     }
 
     _buildBoxShell() {
-        // 파란 플라스틱 재질 (외부)
         const outerMat = new THREE.MeshStandardMaterial({
             color: 0x1e60ff,
             roughness: 0.55,
             metalness: 0.05
         });
-
-        // 안쪽 면 재질 (살짝 더 어둡게 → 깊이감)
         const innerMat = new THREE.MeshStandardMaterial({
             color: 0x144ad9,
             roughness: 0.7,
@@ -63,105 +54,79 @@ export default class IceBox extends THREE.Group {
 
         const { outerW, outerD, outerH, wall, rimH, rimOverhang } = BOX;
 
-        // === 1. 바닥 ===
         const floorGeo = new THREE.BoxGeometry(outerW, wall, outerD);
         const floor = new THREE.Mesh(floorGeo, outerMat);
         floor.position.y = wall / 2;
         this.add(floor);
+        this.shellMeshes.push(floor);
 
-        // === 2. 네 벽 (위가 열린 형태) ===
-        // 벽 높이 = 전체 높이 - 바닥 두께 - rim 두께
         const wallH = outerH - wall - rimH;
 
-        // 전면 / 후면 벽
         for (const zSign of [1, -1]) {
             const wallGeo = new THREE.BoxGeometry(outerW, wallH, wall);
             const wallMesh = new THREE.Mesh(wallGeo, outerMat);
-            wallMesh.position.set(
-                0,
-                wall + wallH / 2,
-                zSign * (outerD / 2 - wall / 2)
-            );
+            wallMesh.position.set(0, wall + wallH / 2, zSign * (outerD / 2 - wall / 2));
             this.add(wallMesh);
+            this.shellMeshes.push(wallMesh);
         }
-
-        // 좌/우 벽
         for (const xSign of [1, -1]) {
             const wallGeo = new THREE.BoxGeometry(wall, wallH, outerD - wall * 2);
             const wallMesh = new THREE.Mesh(wallGeo, outerMat);
-            wallMesh.position.set(
-                xSign * (outerW / 2 - wall / 2),
-                wall + wallH / 2,
-                0
-            );
+            wallMesh.position.set(xSign * (outerW / 2 - wall / 2), wall + wallH / 2, 0);
             this.add(wallMesh);
+            this.shellMeshes.push(wallMesh);
         }
 
-        // === 3. 상단 rim (테두리) ===
-        // 안쪽이 뚫려있는 액자 형태로 만들기 위해 4개의 막대로 구성
         const rimY = wall + wallH + rimH / 2;
         const rimOuterW = outerW + rimOverhang * 2;
         const rimOuterD = outerD + rimOverhang * 2;
-        const rimThickness = wall + rimOverhang;  // rim의 폭(안에서 바깥까지)
+        const rimThickness = wall + rimOverhang;
 
-        // 전면 / 후면 rim
         for (const zSign of [1, -1]) {
             const rimGeo = new THREE.BoxGeometry(rimOuterW, rimH, rimThickness);
             const rimMesh = new THREE.Mesh(rimGeo, outerMat);
-            rimMesh.position.set(
-                0,
-                rimY,
-                zSign * (rimOuterD / 2 - rimThickness / 2)
-            );
+            rimMesh.position.set(0, rimY, zSign * (rimOuterD / 2 - rimThickness / 2));
             this.add(rimMesh);
+            this.shellMeshes.push(rimMesh);
         }
-
-        // 좌/우 rim (가운데 비워둠)
         for (const xSign of [1, -1]) {
             const rimGeo = new THREE.BoxGeometry(rimThickness, rimH, rimOuterD - rimThickness * 2);
             const rimMesh = new THREE.Mesh(rimGeo, outerMat);
-            rimMesh.position.set(
-                xSign * (rimOuterW / 2 - rimThickness / 2),
-                rimY,
-                0
-            );
+            rimMesh.position.set(xSign * (rimOuterW / 2 - rimThickness / 2), rimY, 0);
             this.add(rimMesh);
+            this.shellMeshes.push(rimMesh);
         }
 
-        // === 4. 벽 안쪽 라이닝 (살짝 더 어두운 색조로 깊이감) ===
-        // 4면의 안쪽 면에 평면을 살짝 띄워서 부착
-        const inset = 0.002;  // 벽보다 살짝 안쪽에
+        const inset = 0.002;
         const innerWallH = wallH + 0.01;
         const innerY = wall + innerWallH / 2;
 
-        // 전/후 안쪽 면
         for (const zSign of [1, -1]) {
             const linGeo = new THREE.PlaneGeometry(outerW - wall * 2, innerWallH);
             const lin = new THREE.Mesh(linGeo, innerMat);
             lin.position.set(0, innerY, zSign * (outerD / 2 - wall - inset));
             lin.rotation.y = zSign === 1 ? Math.PI : 0;
             this.add(lin);
+            this.shellMeshes.push(lin);
         }
-
-        // 좌/우 안쪽 면
         for (const xSign of [1, -1]) {
             const linGeo = new THREE.PlaneGeometry(outerD - wall * 2, innerWallH);
             const lin = new THREE.Mesh(linGeo, innerMat);
             lin.position.set(xSign * (outerW / 2 - wall - inset), innerY, 0);
             lin.rotation.y = xSign === 1 ? -Math.PI / 2 : Math.PI / 2;
             this.add(lin);
+            this.shellMeshes.push(lin);
         }
 
-        // 바닥 안쪽 면 (윗면)
         const floorInnerGeo = new THREE.PlaneGeometry(outerW - wall * 2, outerD - wall * 2);
         const floorInner = new THREE.Mesh(floorInnerGeo, innerMat);
         floorInner.rotation.x = -Math.PI / 2;
         floorInner.position.y = wall + inset;
         this.add(floorInner);
+        this.shellMeshes.push(floorInner);
     }
 
     _buildIce() {
-        // 작은 얼음 조각 하나를 만들어 InstancedMesh로 박스 안쪽에 뿌림
         const iceGeo = new THREE.IcosahedronGeometry(0.07, 0);
         const iceMat = new THREE.MeshPhysicalMaterial({
             color: 0xeaf6ff,
@@ -178,58 +143,46 @@ export default class IceBox extends THREE.Group {
         iceMesh.castShadow = true;
         iceMesh.receiveShadow = true;
         iceMesh.name = 'crushedIce';
+        // 얼음은 hover 대상에서 제외 (튜브 hover 방해 방지)
+        iceMesh.userData.skipInteraction = true;
 
         const dummy = new THREE.Object3D();
-
         const innerW = BOX.outerW - BOX.wall * 2 - 0.15;
         const innerD = BOX.outerD - BOX.wall * 2 - 0.15;
-        const iceBaseY = BOX.wall + 0.05;    // 바닥 바로 위
-        const iceMaxY = BOX.outerH - 0.05;   // rim 살짝 아래
+        const iceBaseY = BOX.wall + 0.05;
+        const iceMaxY = BOX.outerH - 0.05;
 
         for (let i = 0; i < ICE_COUNT; i++) {
             const x = (Math.random() - 0.5) * innerW;
             const z = (Math.random() - 0.5) * innerD;
-
-            // 중심에서 멀수록 낮게 → 봉우리 형태
             const distFromCenter = Math.sqrt(
                 (x / (innerW / 2)) ** 2 + (z / (innerD / 2)) ** 2
             );
             const heightCurve = Math.max(0, 1 - distFromCenter ** 1.5);
             const yMax = iceBaseY + (iceMaxY - iceBaseY) * heightCurve;
-
             const y = iceBaseY + Math.random() * (yMax - iceBaseY);
-
             const scale = 0.55 + Math.random() * 0.7;
-            const rotX = Math.random() * Math.PI * 2;
-            const rotY = Math.random() * Math.PI * 2;
-            const rotZ = Math.random() * Math.PI * 2;
-
             dummy.position.set(x, y, z);
-            dummy.rotation.set(rotX, rotY, rotZ);
+            dummy.rotation.set(
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2,
+                Math.random() * Math.PI * 2
+            );
             dummy.scale.setScalar(scale);
             dummy.updateMatrix();
-
             iceMesh.setMatrixAt(i, dummy.matrix);
         }
-
         iceMesh.instanceMatrix.needsUpdate = true;
         this.iceMesh = iceMesh;
         this.add(iceMesh);
     }
 
     _placeTubes() {
-        // 튜브 5개를 얼음 봉우리 위에 박힌 형태로 배치.
-        // 각 튜브의 본체는 얼음 속에 묻히고 뚜껑만 노출되도록 y를 조정.
-
         for (const cfg of TUBE_CONFIG) {
             const tube = new MicroTube(cfg);
-
-            // 튜브 원점은 본체 중심. 본체+뚜껑 길이가 약 0.3 정도라서
-            // y ≈ 0.65 ~ 0.75 정도면 뚜껑이 얼음 봉우리 위에 노출됨
             const buriedY = BOX.outerH - 0.25 + cfg.position.y;
             tube.position.set(cfg.position.x, buriedY, cfg.position.z);
             tube.rotation.set(cfg.rotation.x, cfg.rotation.y, cfg.rotation.z);
-
             this.add(tube);
             this.tubes[cfg.id] = tube;
         }
@@ -237,6 +190,52 @@ export default class IceBox extends THREE.Group {
 
     getTube(id) {
         return this.tubes[id];
+    }
+
+    /**
+     * 인터랙션 컨트롤러에 등록할 객체 목록을 반환.
+     * - 박스 셸은 하나의 단위 (this 자체이지만 mesh만 노출)
+     * - 각 튜브는 개별 단위
+     */
+    getInteractiveTargets() {
+        const targets = [];
+
+        // 박스 셸 — IceBox 그룹 자체를 root로 하되, 인터랙션 시엔 shellMeshes만 검사하도록
+        // 다만 등록 패턴 단순화를 위해 별도 Group으로 묶지 않고
+        // 직접 mesh 단위로 처리. InteractionController가 root로 IceBox를 받으면
+        // traverse 결과에 튜브 mesh까지 다 포함되어버리므로 따로 처리.
+        // → 해결: 박스 셸 전용 가상 root를 사용. 여기선 IceBox를 박스로 등록하되
+        //   튜브 mesh는 traverse에서 제외해야 함. 가장 단순한 방법은 박스 셸 mesh만
+        //   가진 ProxyObject를 만드는 것이지만, 더 단순하게: 각 튜브를 먼저 등록하면
+        //   raycaster가 더 가까운 튜브를 우선 잡으므로 hover 우선순위로 해결됨.
+        //   IceBox는 박스 셸 mesh만으로 등록.
+
+        // 박스 셸 등록 정보 (shellMeshes를 가진 가상 핸들)
+        targets.push({
+            type: 'iceBoxShell',
+            root: this,
+            meshes: this.shellMeshes,
+            displayName: 'Ice Box (아이스박스)',
+            displayRole: '얼음으로 시료 저온 보관'
+        });
+
+        // 각 튜브 등록 정보
+        for (const id in this.tubes) {
+            const tube = this.tubes[id];
+            const tubeMeshes = [];
+            tube.traverse((c) => {
+                if (c.isMesh) tubeMeshes.push(c);
+            });
+            targets.push({
+                type: 'tube',
+                root: tube,
+                meshes: tubeMeshes,
+                displayName: tube.config.shortName,
+                displayRole: tube.config.role
+            });
+        }
+
+        return targets;
     }
 
     update(deltaMs) {
