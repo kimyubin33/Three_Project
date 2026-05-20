@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plasmid Transformation - Ch.1 Thawing</title>
+    <style>
+        :root {
+            --bg-color: #0b0b0f;
+            --panel-bg: rgba(20, 20, 30, 0.7);
+            --accent-color: #3b82f6;
+            --accent-hover: #1d4ed8;
+            --text-color: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* 3D 캔버스 영역 */
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* 글래스모피즘 UI 패널 */
+        .ui-overlay {
+            position: absolute;
+            z-index: 10;
+            pointer-events: none; /* 3D 드래그 방해 안 함 */
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 24px;
+        }
+
+        .interactive {
+            pointer-events: auto; /* UI 요소는 클릭 가능 */
+        }
+
+        /* 상단 타이틀 바 */
+        header {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 16px 24px;
+            border-radius: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1200px;
+            width: calc(100% - 48px);
+            margin: 0 auto;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .logo-group h1 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo-group p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .step-badge {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 6px 12px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* 좌측 정보 안내 패널 */
+        .sidebar {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            border-radius: 20px;
+            width: 340px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar h2 {
+            font-size: 1.1rem;
+            margin-bottom: 12px;
+            color: #f3f4f6;
+            border-left: 4px solid var(--accent-color);
+            padding-left: 8px;
+        }
+
+        .sidebar p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .object-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .object-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .object-item span.dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* 하단 도움말 바 */
+        footer {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            border-top: 1px solid var(--border-color);
+            width: 100%;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            padding: 12px 24px;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            z-index: 10;
+        }
+
+        /* 로딩 화면 */
+        #loader {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--bg-color);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            margin-top: 16px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+    </style>
+    <!-- 구글 폰트 추가 -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Import Map을 활용한 Three.js 모듈 경로 해석 선언 -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- 로딩 인디케이터 -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <div class="loader-text">Loading 3D Laboratory Scene...</div>
+    </div>
+
+    <!-- 3D 뷰포트 컨테이너 -->
+    <div id="webgl-container"></div>
+
+    <!-- UI 레이어 -->
+    <div class="ui-overlay">
+        <!-- 상단 타이틀 바 -->
+        <header class="interactive">
+            <div class="logo-group">
+                <h1>Plasmid Transformation Simulator</h1>
+                <p>3D Interactive Laboratory Workspace</p>
+            </div>
+            <div class="step-badge">Ch.1 Thawing (해동 단계)</div>
+        </header>
+
+        <!-- 좌측 상태 정보창 -->
+        <div class="sidebar interactive">
+            <h2>실험 기구 목록</h2>
+            <p>화면에 배치된 구성 요소들은 각각 고유한 물리 속성과 상태 데이터를 바인딩하고 있습니다. 마우스를 드래그하여 시점을 회전할 수 있습니다.</p>
+            
+            <ul class="object-list">
+                <li class="object-item">
+                    <div style="display: flex; align-items: center;">
+                        <span class="dot" style="background-color: #0066cc;"></span>
+                        <span>Ice Box (아이스박스)</span>
+                    </div>
+                    <span style="color: #60a5fa; font-weight: 500;">0℃ 보관</span>
+                </li>
+                <li class="object-item">
+                    <div style="display: flex; align-items: center;">
+                        <span class="dot" style="background-color: #ff3366;"></span>
+                        <span>Tube 1 (Comp. Cell A)</span>
+                    </div>
+                    <span style="color: #ef4444; font-weight: 500;">-80℃ 냉동</span>
+                </li>
+                <li class="object-item">
+                    <div style="display: flex; align-items: center;">
+                        <span class="dot" style="background-color: #9933ff;"></span>
+                        <span>Tube 2 (Comp. Cell B)</span>
+                    </div>
+                    <span style="color: #ef4444; font-weight: 500;">-80℃ 냉동</span>
+                </li>
+                <li class="object-item">
+                    <div style="display: flex; align-items: center;">
+                        <span class="dot" style="background-color: #ff9900;"></span>
+                        <span>Tube 5 (SOC Medium)</span>
+                    </div>
+                    <span style="color: #10b981; font-weight: 500;">25℃ 상온</span>
+                </li>
+                <li class="object-item">
+                    <div style="display: flex; align-items: center;">
+                        <span class="dot" style="background-color: #ffcc00;"></span>
+                        <span>P200 / P1000 피펫</span>
+                    </div>
+                    <span style="color: #a78bfa; font-weight: 500;">모듈 장착</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- 하단 도움말 바 -->
+    <footer>
+        마우스 왼쪽 버튼 드래그: 회전 | 마우스 오른쪽 버튼 드래그: 이동 | 휠 스크롤: 확대/축소 | 각 부품 클릭 시 인터랙션 가능 (Raycaster 준비 완료)
+    </footer>
+
+    <!-- Three.js 구동을 위한 엔트리 스크립트 로드 -->
+    <script type="module" src="./main.js"></script>
+</body>
+</html>
