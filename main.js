@@ -6,6 +6,7 @@ import InteractionController from './src/core/InteractionController.js';
 import AppState from './src/core/AppState.js';
 import ThawingScene from './src/scenes/ThawingScene.js';
 import Sidebar from './src/ui/Sidebar.js';
+import ChapterNav from './src/ui/ChapterNav.js';
 import Tooltip from './src/ui/Tooltip.js';
 
 function bootstrap() {
@@ -24,6 +25,7 @@ function bootstrap() {
 
     // === 3) UI ===
     const sidebar = new Sidebar('#sidebar-mount');
+    const chapterNav = new ChapterNav('#chapter-nav-mount');
     const tooltip = new Tooltip();
 
     // === 4) 인터랙션 ===
@@ -94,6 +96,7 @@ function bootstrap() {
         sceneManager,
         thawing,
         sidebar,
+        chapterNav,
         tooltip,
         interaction,
         AppState,

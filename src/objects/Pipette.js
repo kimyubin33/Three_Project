@@ -8,7 +8,7 @@
 //   - 팁 이젝터 (옆 작은 버튼)
 //   - 샤프트 (가늘어지는 부분)
 //   - 팁 콘 (팁이 꽂히는 끝, 검정)
-
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import * as THREE from 'three';
 
 const PIPETTE_SPECS = {
@@ -95,7 +95,17 @@ export default class Pipette extends THREE.Group {
         const display = new THREE.Mesh(displayGeo, displayMat);
         display.position.set(0, 0.15, this.spec.bodyRadius * 1.1);
         this.add(display);
-        this.displayMesh = display;  // 추후 텍스트 라벨 부착 위치
+        this.displayMesh = display;
+        // CSS2DObject로 디스플레이 위에 숫자 라벨 부착
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'pipette-display-label';
+        labelDiv.dataset.pipetteType = this.type;
+        labelDiv.innerHTML = this._formatDisplayHtml(this.state.currentVolume);
+        const label = new CSS2DObject(labelDiv);
+        // 디스플레이 창 정면에 살짝 띄워서 배치
+        label.position.set(0, 0.15, this.spec.bodyRadius * 1.15 + 0.005);
+        this.add(label);
+        this.displayLabel = labelDiv; // 업데이트 편의를 위해 DOM 요소 참조 저장
     }
 
     _buildKnob() {
@@ -192,6 +202,17 @@ export default class Pipette extends THREE.Group {
         this.tipConeMesh = cone;
     }
 
+_formatDisplayHtml(volume) {
+        // P200: 표시값 = 실제 µL (예: 50 µL → "050")
+        // P1000: 표시값 × 10 = 실제 µL (예: 500 µL → "050", 작은 "×10" 표기)
+        if (this.type === 'p200') {
+            const display = Math.round(volume).toString().padStart(3, '0');
+            return `<div class="pd-main">${display}</div>`;
+        } else {
+            const display = Math.round(volume / 10).toString().padStart(3, '0');
+            return `<div class="pd-main">${display}</div><div class="pd-unit">×10 µL</div>`;
+        }
+    }
     /**
      * 다이얼 값 변경 (외부 UI에서 호출)
      * 추후 다이얼 인터랙션 모듈에서 사용
@@ -200,6 +221,9 @@ export default class Pipette extends THREE.Group {
         const clamped = Math.max(0, Math.min(this.spec.maxVolume, value));
         this.state.currentVolume = clamped;
         // TODO: displayMesh에 텍스트 라벨 업데이트
+        if (this.displayLabel) {
+            this.displayLabel.innerHTML = this._formatDisplayHtml(clamped);
+        }
     }
 
     setHighlight(on) {

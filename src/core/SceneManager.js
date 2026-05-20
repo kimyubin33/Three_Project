@@ -3,6 +3,7 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 
 export default class SceneManager {
     constructor(container) {
@@ -28,6 +29,13 @@ export default class SceneManager {
         this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
         this.renderer.toneMappingExposure = 1.0;
         this.container.appendChild(this.renderer.domElement);
+        this.labelRenderer = new CSS2DRenderer();
+        this.labelRenderer.setSize(this.container.clientWidth, this.container.clientHeight);
+        this.labelRenderer.domElement.style.position = 'absolute';
+        this.labelRenderer.domElement.style.top = '0';
+        this.labelRenderer.domElement.style.left = '0';
+        this.labelRenderer.domElement.style.pointerEvents = 'none';
+        this.container.appendChild(this.labelRenderer.domElement);
     }
 
     _initCamera() {
@@ -56,6 +64,7 @@ export default class SceneManager {
             this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
             this.camera.updateProjectionMatrix();
             this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
+            this.labelRenderer.setSize(this.container.clientWidth, this.container.clientHeight);
         });
     }
 
@@ -86,6 +95,7 @@ export default class SceneManager {
             }
             if (this.currentScene && this.currentScene.scene) {
                 this.renderer.render(this.currentScene.scene, this.camera);
+                this.labelRenderer.render(this.currentScene.scene, this.camera);
             }
         };
         animate();

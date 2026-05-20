@@ -97,6 +97,59 @@
             font-size: 0.8rem;
             font-weight: 600;
         }
+        /*챕터 네비게이션 */
+        .chapter-nav {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chapter-nav-btn {
+            background: rgba(59, 130, 246, 0.15);
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            color: #93c5fd;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            user-select: none;
+        }
+
+        .chapter-nav-btn:hover:not(:disabled){
+            background: rgba(59,130,246,0.3);
+            border-color: rgba(59,130,246,0.5);
+            color: #dbeafe;
+        }
+
+        .chapter-nav-btn:disabled {
+            opacity: 0.25;
+            cursor: not-allowed;
+        }
+
+        .chapter-nav-label {
+            background: rgba(59, 130, 246, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #60a5fa;
+            padding: 6px 14px;
+            border-radius: 9999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            min-width: 200px;
+            text-align: center;
+            cursor: default;
+            user-select: none;
+        }
+
+        .chapter-nav-label.unimplemented {
+            color: #9ca3af;
+            background: rgba(120, 120, 130, 0.15);
+            border-color: rgba(120, 120, 130, 0.25);
+        }
 
         /* 좌측 사이드바 */
         .sidebar {
@@ -258,6 +311,36 @@
             color: var(--text-muted);
             letter-spacing: 0.05em;
         }
+        /*피펫 디스플레이 라벨 (CSS2DRenderer로 3D 좌표에 부착) */
+        .pipette-display-label {
+            background: #0a0e1a;
+            color: #ff4444;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            border: 1px solid #1a2030;
+            border-radius: 2px;
+            padding: 2px 5px;
+            text-align: center;
+            box-shadow: inset 0 0 4px rgba(255, 68, 68, 0.3);
+            user-select: none;
+            pointer-events: none;
+            min-width: 38px;
+        }
+
+        .pipette-display-label .pd-main {
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            line-height: 1;
+            text-shadow: 0 0 3px rgba(255, 68, 68, 0.6);
+        }
+
+        .pipette-display-label .pd-unit {
+            font-size: 0.5rem;
+            color: #ff8888;
+            margin-top: 1px;
+            letter-spacing: 0;
+            opacity: 0.7;
+        }
     </style>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -285,7 +368,7 @@
                 <h1>Plasmid Transformation Simulator</h1>
                 <p>3D Interactive Laboratory Workspace</p>
             </div>
-            <div class="step-badge" id="chapter-badge">Ch.1 Thawing (해동 단계)</div>
+            <div id="chapter-nav-mount"></div>
         </header>
 
         <!-- 사이드바: 내용은 Sidebar.js가 동적으로 채움 -->

@@ -14,6 +14,7 @@ export const CHAPTERS = [
         title: 'Ch.0 보관 상태',
         description: '디프프리저/냉동고에서 막 꺼낸 직후. 각 시료는 원래 보관 온도를 유지.',
         // 튜브별 상태 오버라이드 (없으면 기본값 = config의 storageLabel/storageTemp)
+        implemented: true,
         tubeOverrides: null
     },
     {
@@ -28,8 +29,56 @@ export const CHAPTERS = [
             tube4: { label: '해동 중 (0°C)', status: 'thawing' },
             tube5: { label: '해동 중 (0°C)', status: 'thawing' }
         }
+    },
+    {
+        id: 2,
+        name: 'p200-dial',
+        title: 'Ch.2 P200 다이얼 설정',
+        description: 'P200 피펫의 다이얼을 050(=50 µL)으로 맞춥니다.',
+        implemented: false
+    },
+    {
+        id: 3,
+        name: 'plasmid-injection',
+        title: 'Ch.3 Plasmid DNA 주입',
+        description: '5 µL 플라스미드를 각 Competent Cell에 첨가하고 Tapping으로 혼합.',
+        implemented: false
+    },
+    {
+        id: 4,
+        name: 'ice-incubation',
+        title: 'Ch.4 Ice Incubation (30분)',
+        description: '얼음에 꽂아 30분간 반응시킵니다.',
+        implemented: false
+    },
+    {
+        id: 5,
+        name: 'heat-shock',
+        title: 'Ch.5 Heat Shock (42°C, 45초)',
+        description: '히팅 블록에서 90초간 열충격 후 즉시 얼음으로 복귀.',
+        implemented: false
+    },
+    {
+        id: 6,
+        name: 'p1000-soc',
+        title: 'Ch.6 P1000 + SOC 첨가',
+        description: 'P1000 다이얼을 050으로 맞추고 SOC 배지 500 µL 첨가.',
+        implemented: false
+    },
+    {
+        id: 7,
+        name: 'shaking',
+        title: 'Ch.7 Shaking Incubation',
+        description: '라벨링 → 분주 → 스프레더 도말 → 파라필름 밀봉.',
+        implemented: false
+    },
+    {
+        id: 9,
+        name: 'result',
+        title: 'Ch.9 Overnight & Result',
+        description: '37°C overnight 배양 후 콜로니 비교.',
+        implemented: false
     }
-    // Ch.2~9는 챕터 매니저 만들 때 추가
 ];
 
 /**
