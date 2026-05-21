@@ -202,6 +202,39 @@ export default class Pipette extends THREE.Group {
         this.tipConeMesh = cone;
     }
 
+    /**
+     * 현재 챕터의 목표값과 비교하여 디스플레이 색을 갱신.
+     * 목표값이 없거나 다른 피펫의 목표면 빨강(기본), 일치하면 녹색.
+     */
+    _updateTargetState() {
+        if (!this.displayLabel) return;
+        const isMatched = this._targetMatched();
+        this.displayLabel.classList.toggle('target-matched', isMatched);
+        this.state.atTarget = isMatched;
+    }
+
+    _updateKnobRotation() {
+        if (!this.knobMesh) return;
+        const ratio = this.state.currentVolume / this.spec.maxVolume;
+        const totalRotations = 3;
+        this.knobMesh.rotation.y = ratio * Math.PI * 2 * totalRotations;
+    }
+
+    _targetMatched() {
+        if (!this._currentTarget) return false;
+        if (this._currentTarget.pipetteType !== this.type) return false;
+        return Math.round(this.state.currentVolume) === this._currentTarget.volume;
+    }
+
+    /**
+     * 외부에서 현재 챕터의 목표값을 주입.
+     * null을 넘기면 목표 해제.
+     */
+    setTarget(target) {
+        this._currentTarget = target;  // { pipetteType, volume } | null
+        this._updateTargetState();
+    }
+
 _formatDisplayHtml(volume) {
         // P200: 표시값 = 실제 µL (예: 50 µL → "050")
         // P1000: 표시값 × 10 = 실제 µL (예: 500 µL → "050", 작은 "×10" 표기)
@@ -224,6 +257,8 @@ _formatDisplayHtml(volume) {
         if (this.displayLabel) {
             this.displayLabel.innerHTML = this._formatDisplayHtml(clamped);
         }
+        this._updateKnobRotation();
+        this._updateTargetState();
     }
 
     setHighlight(on) {

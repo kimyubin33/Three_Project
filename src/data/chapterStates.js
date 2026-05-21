@@ -35,7 +35,8 @@ export const CHAPTERS = [
         name: 'p200-dial',
         title: 'Ch.2 P200 다이얼 설정',
         description: 'P200 피펫의 다이얼을 050(=50 µL)으로 맞춥니다.',
-        implemented: false
+        implemented: false,
+        target: { pipetteType: 'p200', volume: 50 }
     },
     {
         id: 3,
@@ -63,7 +64,8 @@ export const CHAPTERS = [
         name: 'p1000-soc',
         title: 'Ch.6 P1000 + SOC 첨가',
         description: 'P1000 다이얼을 050으로 맞추고 SOC 배지 500 µL 첨가.',
-        implemented: false
+        implemented: false,
+        target: { pipetteType: 'p1000', volume: 500 }
     },
     {
         id: 7,

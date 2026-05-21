@@ -1,6 +1,7 @@
 // main.js
 // 애플리케이션 엔트리 포인트.
 
+import { CHAPTERS } from './src/data/chapterStates.js';
 import DialPanel from './src/ui/DialPanel.js';
 import SceneManager from './src/core/SceneManager.js';
 import InteractionController from './src/core/InteractionController.js';
@@ -80,6 +81,13 @@ function bootstrap() {
     });
 
     // === 5) 초기 상태 ===
+    // 챕터 변경 시 현재 챕터의 목표를 두 피펫에 주입
+    AppState.subscribe('chapter', (chapterId) => {
+        const ch = CHAPTERS.find(c => c.id === chapterId);
+        const target = ch ? ch.target || null : null;
+        thawing.objects.p200.setTarget(target);
+        thawing.objects.p1000.setTarget(target);
+    });
     AppState.set('chapter', 0);
 
     // === 6) 로더 페이드아웃 ===

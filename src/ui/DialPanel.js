@@ -35,6 +35,7 @@ export default class DialPanel {
                 </div>
 
                 <div class="dp-range"></div>
+                <div class="dp-target"></div>
                 <div class="dp-warning"></div>
 
                 <div class="dp-hint">Enter / ESC / 바깥 클릭 → 닫기</div>
@@ -47,6 +48,7 @@ export default class DialPanel {
         this.inputEl = this.overlay.querySelector('.dp-input');
         this.displayValueEl = this.overlay.querySelector('.dp-display-value');
         this.rangeEl = this.overlay.querySelector('.dp-range');
+        this.targetEl = this.overlay.querySelector('.dp-target');
         this.warningEl = this.overlay.querySelector('.dp-warning');
         this.closeBtn = this.overlay.querySelector('.dp-close');
     }
@@ -74,6 +76,7 @@ export default class DialPanel {
         this.rangeEl.textContent = `허용 범위: 0 ~ ${pipette.spec.maxVolume} µL`;
         this.warningEl.textContent = '';
         this.warningEl.classList.remove('show');
+        this._updateTargetUI();
 
         const cur = Math.round(pipette.state.currentVolume);
         this.inputEl.value = cur.toString();
@@ -150,5 +153,26 @@ export default class DialPanel {
     _showWarning(msg) {
         this.warningEl.textContent = msg;
         this.warningEl.classList.add('show');
+    }
+
+    _updateTargetUI() {
+        if (!this._pipette || !this.targetEl) return;
+        const target = this._pipette._currentTarget;
+
+        if (!target || target.pipetteType !== this._pipette.type) {
+            this.targetEl.textContent = '';
+            this.targetEl.classList.remove('show', 'matched');
+            return;
+        }
+
+        const matched = this._pipette._targetMatched();
+        if (matched) {
+            this.targetEl.textContent = `✓ 목표값 도달 (${target.volume} µL)`;
+            this.targetEl.classList.add('show', 'matched');
+        } else {
+            this.targetEl.textContent = `목표: ${target.volume} µL`;
+            this.targetEl.classList.add('show');
+            this.targetEl.classList.remove('matched');
+        }
     }
 }
