@@ -68,6 +68,12 @@ export default class SceneManager {
         });
     }
 
+    moveCameraTo(position, target) {
+        this.camera.position.set(position[0], position[1], position[2]);
+        this.controls.target.set(target[0], target[1], target[2]);
+        this.controls.update();
+    }
+
     setScene(chapterScene) {
         this.currentScene = chapterScene;
     }

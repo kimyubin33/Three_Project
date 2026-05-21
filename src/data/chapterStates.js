@@ -15,19 +15,28 @@ export const CHAPTERS = [
         description: '디프프리저/냉동고에서 막 꺼낸 직후. 각 시료는 원래 보관 온도를 유지.',
         // 튜브별 상태 오버라이드 (없으면 기본값 = config의 storageLabel/storageTemp)
         implemented: true,
-        tubeOverrides: null
+        tubeOverrides: null,
+        focus: {
+            cameraPosition: [0, 5.5, 7.5],
+            cameraTarget: [0, 0.8,0],
+        }
     },
     {
         id: 1,
         name: 'thawing',
         title: 'Ch.1 해동 단계',
         description: '얼음 위에서 시료를 천천히 해동 중. Competent Cell은 손에 쥐고 해동.',
+        implemented: true,
         tubeOverrides: {
             tube1: { label: '해동 중 (0°C)', status: 'thawing' },
             tube2: { label: '해동 중 (0°C)', status: 'thawing' },
             tube3: { label: '해동 중 (0°C)', status: 'thawing' },
             tube4: { label: '해동 중 (0°C)', status: 'thawing' },
             tube5: { label: '해동 중 (0°C)', status: 'thawing' }
+        },
+        focus: {
+            cameraPosition: [0, 4, 5],
+            cameraTarget: [0, 0.8, 0]
         }
     },
     {
@@ -36,7 +45,11 @@ export const CHAPTERS = [
         title: 'Ch.2 P200 다이얼 설정',
         description: 'P200 피펫의 다이얼을 050(=50 µL)으로 맞춥니다.',
         implemented: false,
-        target: { pipetteType: 'p200', volume: 50 }
+        target: { pipetteType: 'p200', volume: 50 },
+        focus: {
+            cameraPosition: [3.5, 2.5, 3],
+            cameraTarget: [3.5, 1, 0.8]
+        }
     },
     {
         id: 3,
@@ -65,7 +78,11 @@ export const CHAPTERS = [
         title: 'Ch.6 P1000 + SOC 첨가',
         description: 'P1000 다이얼을 050으로 맞추고 SOC 배지 500 µL 첨가.',
         implemented: false,
-        target: { pipetteType: 'p1000', volume: 500 }
+        target: { pipetteType: 'p1000', volume: 500 },
+        focus: {
+            cameraPosition: [4.3, 2.5, 2],
+            cameraTarget: [4.3, 1, -0.2]
+        }
     },
     {
         id: 7,

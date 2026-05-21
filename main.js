@@ -81,12 +81,19 @@ function bootstrap() {
     });
 
     // === 5) 초기 상태 ===
-    // 챕터 변경 시 현재 챕터의 목표를 두 피펫에 주입
+    // 챕터 변경 시 적용할 것들 (목표값, 카메라)
     AppState.subscribe('chapter', (chapterId) => {
         const ch = CHAPTERS.find(c => c.id === chapterId);
+
+        // 1. 피펫 목표값 주입
         const target = ch ? ch.target || null : null;
         thawing.objects.p200.setTarget(target);
         thawing.objects.p1000.setTarget(target);
+
+        // 2. 카메라 이동 (focus 정의된 챕터만)
+        if (ch && ch.focus) {
+            sceneManager.moveCameraTo(ch.focus.cameraPosition, ch.focus.cameraTarget);
+        }
     });
     AppState.set('chapter', 0);
 
