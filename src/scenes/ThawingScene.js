@@ -19,8 +19,8 @@ export default class ThawingScene {
     }
 
     _setupLighting() {
-        const ambient = new THREE.AmbientLight(0xffffff, 0.55);
-        this.scene.add(ambient);
+        this.ambientLight = new THREE.AmbientLight(0xffffff, 0.55);
+        this.scene.add(this.ambientLight);
 
         const key = new THREE.DirectionalLight(0xffffff, 0.85);
         key.position.set(6, 10, 7);

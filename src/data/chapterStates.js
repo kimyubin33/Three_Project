@@ -48,7 +48,8 @@ export const CHAPTERS = [
         target: { pipetteType: 'p200', volume: 50 },
         focus: {
             cameraPosition: [3.5, 2.5, 3],
-            cameraTarget: [3.5, 1, 0.8]
+            cameraTarget: [3.5, 1, 0.8],
+            ambientIntensity: 0.15
         }
     },
     {
@@ -81,7 +82,8 @@ export const CHAPTERS = [
         target: { pipetteType: 'p1000', volume: 500 },
         focus: {
             cameraPosition: [4.3, 2.5, 2],
-            cameraTarget: [4.3, 1, -0.2]
+            cameraTarget: [4.3, 1, -0.2],
+            ambientIntensity: 0.15
         }
     },
     {

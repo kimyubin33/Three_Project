@@ -94,6 +94,12 @@ function bootstrap() {
         if (ch && ch.focus) {
             sceneManager.moveCameraTo(ch.focus.cameraPosition, ch.focus.cameraTarget);
         }
+
+        // 3. Ambient light 변경
+        const ambientIntensity = (ch && ch.focus && ch.focus.ambientIntensity !== undefined)
+            ? ch.focus.ambientIntensity 
+            : 0.55;
+        thawing.ambientLight.intensity = ambientIntensity;
     });
     AppState.set('chapter', 0);
 
