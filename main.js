@@ -100,7 +100,15 @@ function bootstrap() {
             ? ch.focus.ambientIntensity 
             : 0.55;
         thawing.ambientLight.intensity = ambientIntensity;
+
+        // 4. Spot light 생성/제거
+        if (ch && ch.focus && ch.focus.spotLight) {
+            thawing.addSpotLight(ch.focus.spotLight);
+        } else {
+            thawing.removeSpotLight();
+        }
     });
+    
     AppState.set('chapter', 0);
 
     // === 6) 로더 페이드아웃 ===

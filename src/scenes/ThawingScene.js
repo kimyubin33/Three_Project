@@ -112,6 +112,7 @@ export default class ThawingScene {
                     : '대용량 분주 (200~1000 µL)'
             });
         }
+        
 
         // 팁박스 2개
         for (const [id, role] of [
@@ -133,6 +134,55 @@ export default class ThawingScene {
         }
 
         return targets;
+    }
+
+    /**
+     * 챕터 진입 시 호출. focus.spotLight 정보로 spot light 생성.
+     */
+    addSpotLight(config) {
+        // 기존 것 있으면 먼저 제거
+        this.removeSpotLight();
+
+        const spot = new THREE.SpotLight(
+            config.color || 0xffffff,
+            config.intensity || 5,
+            config.distance || 10,
+            config.angle || 0.5,
+            config.penumbra || 0.4
+        );
+        spot.position.set(config.position[0], config.position[1], config.position[2]);
+
+        // SpotLight는 target 객체의 position을 향함 (Object3D)
+        const target = new THREE.Object3D();
+        target.position.set(config.target[0], config.target[1], config.target[2]);
+        this.scene.add(target);
+        spot.target = target;
+
+        // 그림자 설정 (선택)
+        spot.castShadow = true;
+        spot.shadow.mapSize.set(1024, 1024);
+        spot.shadow.camera.near = 0.5;
+        spot.shadow.camera.far = 12;
+
+        this.scene.add(spot);
+
+        this._currentSpotLight = spot;
+        this._currentSpotTarget = target;
+    }
+
+    /**
+     * 챕터 나갈 때 호출. 현재 spot light 제거.
+     */
+    removeSpotLight() {
+        if (this._currentSpotLight) {
+            this.scene.remove(this._currentSpotLight);
+            this._currentSpotLight.dispose();
+            this._currentSpotLight = null;
+        }
+        if (this._currentSpotTarget) {
+            this.scene.remove(this._currentSpotTarget);
+            this._currentSpotTarget = null;
+        }
     }
 
     update(deltaMs) {

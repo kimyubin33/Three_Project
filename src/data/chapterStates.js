@@ -48,8 +48,17 @@ export const CHAPTERS = [
         target: { pipetteType: 'p200', volume: 50 },
         focus: {
             cameraPosition: [3.5, 2.5, 3],
-            cameraTarget: [3.5, 1, 0.8],
-            ambientIntensity: 0.15
+            cameraTarget: [3.5, 1, 0.8],    // P200 위치
+            ambientIntensity: 0.15,         // P200 위쪽 약간 앞에서
+            spotLight: {
+                target: [3.5, 0.85, 0.8],
+                position: [3.5, 4, 2],      
+                color: 0xffffff,
+                intensity: 100,               // 밝기
+                angle: 0.3,                 // spot light의 원뿔 각도, 좁히면(0.3) 핀 조명, 넓히면(0.7) 부드러움
+                penumbra: 0.4,              // 가장자리 설정(부드럽게)
+                distance: 8          // 빛이 도달하는 최대 거리. 너무 멀면 전체적으로 밝아지고, 너무 가까우면 갑자기 어두워짐. 피펫과 조명 위치 고려해서 적절히.
+            }
         }
     },
     {
@@ -83,7 +92,16 @@ export const CHAPTERS = [
         focus: {
             cameraPosition: [4.3, 2.5, 2],
             cameraTarget: [4.3, 1, -0.2],
-            ambientIntensity: 0.15
+            ambientIntensity: 0.15,
+            spotLight: {
+                target: [4.3, 0.9, -0.2],
+                position: [4.3, 4, 1],
+                color: 0xffffff,
+                intensity: 100,
+                angle: 0.3,
+                penumbra: 0.4,
+                distance: 8
+            }
         }
     },
     {
