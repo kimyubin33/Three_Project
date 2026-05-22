@@ -41,6 +41,19 @@ function bootstrap() {
     const targets = thawing.getInteractiveTargets();
     interaction.registerAll(targets, {
         onHoverEnter: (target) => {
+
+            // 펄스 중인 피펫이면 hover 시 멈춤
+            // 현재 hover된 대상이 피펫인지 확인한다.
+            // 또한 stopPulse 함수가 실제로 존재하는지도 검사한다.
+            //
+            // typeof === 'function' 검사를 사용하는 이유:
+            // stopPulse가 없는 객체에서 함수를 호출하면 에러가 발생할 수 있기 때문이다.
+            if (target.type === 'pipette' && typeof target.root.stopPulse === 'function') {
+
+                // 사용자가 이미 올바른 피펫 위에 마우스를 올렸으므로
+                // "여기 클릭하세요" 시각 힌트(펄스 효과)를 종료한다.
+                target.root.stopPulse();
+            }
             // 하이라이트 (객체가 setHighlight를 가지고 있으면)
             if (typeof target.root.setHighlight === 'function') {
                 target.root.setHighlight(true);
@@ -106,6 +119,35 @@ function bootstrap() {
             thawing.addSpotLight(ch.focus.spotLight);
         } else {
             thawing.removeSpotLight();
+        }
+
+        // 5. 피펫 펄스 (대상 피펫에 챕터 진입 펄스 힌트)
+        // 현재 챕터 진입 시,
+        // 어떤 피펫을 사용해야 하는지 사용자에게 시각적으로 알려준다.
+
+        // 이전 챕터에서 반짝이고 있는 피펫들을 먼저 모두 끈다.
+        // 안 끄면 여러 피펫이 동시에 반짝여 사용자 혼란이 생길 수 있다.
+        thawing.objects.p200.stopPulse();
+        thawing.objects.p1000.stopPulse();
+
+        // 현재 챕터(ch)와 목표 대상(target)이 존재하는지 확인한다.
+        // target 안에는 현재 사용해야 할 피펫 종류 정보가 들어 있다.
+        if (ch && ch.target){
+
+            // 현재 챕터가 요구하는 피펫 종류를 가져온다.
+            // 예:
+            // ch.target.pipetteType === 'p200'
+            //
+            // 그러면:
+            // thawing.objects["p200"]
+            // -> thawing.objects.p200
+            //
+            // 객체 이름을 문자열로 접근하는 동적 접근 방식이다.
+            const pip=thawing.objects[ch.target.pipetteType];
+
+            // 해당 피펫 객체가 실제로 존재하면
+            // 펄스(반짝이는 시각 힌트)를 시작한다.
+            if(pip) pip.startPulse();
         }
     });
     

@@ -11,6 +11,8 @@
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import * as THREE from 'three';
 
+const PULSE_COLOR = new THREE.Color(0x3b82f6); // 파란색 (Tailwind의 blue-500)
+
 const PIPETTE_SPECS = {
     p200: {
         name: 'P200 Pipette',
@@ -267,7 +269,111 @@ _formatDisplayHtml(volume) {
         this.knobMesh.material.emissiveIntensity = on ? 0.5 : 0;
     }
 
-    update(deltaMs) {
-        // 향후 확장
+    /**
+     * 펄스 시작, 사용자가 "여기 클릭하세요" 시각 힌트.
+     * update()에서 매 프레임 emissive를 사인파로 진동.
+     */
+
+    // 펄스 깜빡임을 시작하는 코드
+    startPulse() {
+        this._pulsing = true; // 이 오브젝트가 현재 펄스 중인지 저장, "지금 버튼이 반짝이고 있는 상태인가?"를 기록하는 변수
+        this._pulseStartTime = performance.now(); // 현재 시간을 밀리초(ms) 단위로 저장, 사인파(sin)를 이용해서 부드럽게 밝기를 흔들기 위해 사용
+
+        // 펄스 효과를 적용할 Mesh들을 저장할 배열을 초기화한다.
+        // startPulse() 가 여러 번 호출될 수 있으므로, 이전 목록을 비우고 새로 수집한다.
+        this._pulseMeshes = [];
+
+        // this 객체와 그 안에 포함된 모든 자식 오브젝트를 순회한다.
+        // 예: 기계 본체, 뚜껑, 버튼, 손잡이 등
+        this.traverse((c) => {
+
+        // c.isMesh:
+        // 현재 오브젝트가 실제 화면에 보이는 Mesh인지 확인한다.
+        //
+        // c.material:
+        // Mesh에 재질이 있는지 확인한다.
+        //
+        // 'emissive' in c.material:
+        // 이 재질이 자체 발광 색상(emissive)을 지원하는지 확인한다.
+        // emissive가 없는 재질에는 발광 효과를 줄 수 없다.
+            if (c.isMesh && c.material && 'emissive' in c.material) {
+
+                // 조건을 통과한 Mesh를 펄스 대상 목록에 추가한다.
+                // 이후 startPulse()애서 색상을 지정하고,
+                // update()에서 emissiveIntensity를 바꾸어 깜빡이게 만든다.
+                this._pulseMeshes.push(c);
+            }
+        })
+
+        // 펄스 효과를 줄 Mesh들을 하나씩 확인한다.
+        // 예: 버튼, 손잡이, 뚜껑 등 사용자가 클릭해야 하는 오브젝트들
+        for (const m of this._pulseMeshes) {
+
+            // 안전장치:
+            // material이 없거나 emissive 속성이 없는 재질이면
+            // 발광 효과를 줄 수 없으므로 이번 Mesh는 건너뛴다.
+            if (!m.material?.emissive) continue;
+
+            // 펄스 색상 설정:
+            // update()에서 매 프레임 색상을 새로 만들면 낭비가 생기므로,
+            // startPulse() 시점에 발광 색상만 한 번 지정한다.
+            m.material.emissive.set(PULSE_COLOR);
+        }
+    }
+
+    // 펄스를 종료하는 코드
+    stopPulse() {
+
+        // 펄스 상태를 종료한다.
+        // update()에서 더 이상 emissiveIntensity를 계산하거나 적용하지 않게 된다.
+        this._pulsing = false;
+
+        // 펄스 대상 Mesh 목록이 존재할 때만 실행한다.
+        // null 상태에서 순회하면 에러가 발생할 수 있으므로 안전하게 검사한다.
+        if (this._pulseMeshes) { // 안전장치. knobMesh가 존재할 때만 실행
+
+            // 펄스 효과가 적용되던 모든 Mesh를 순회한다.
+            for (const m of this._pulseMeshes) {
+
+                // emissiveIntensity:
+                // 자체 발광(emissive)의 밝기 강도
+                //
+                // 펄스가 멈춘 순간 마지막 밝기 값이 남아 있을 수 있으므로
+                // 강제로 0으로 초기화한다.
+                m.material.emissiveIntensity = 0;
+
+                // emissive:
+                // 자체 발광 색상
+                //
+                // 발광 색상도 검정(0x000000)으로 초기화하여
+                // 완전히 빛이 없는 상태로 되돌린다.
+                m.material.emissive.set(0x000000); // 발광 색상도 초기화 (검정)
+            }
+        }
+
+        // 펄스 대상 Mesh 목록 참조 제거
+        // 이후 startPulse()에서 새로 수집하도록 한다.
+        // 메모리 정리 및 이전 상태 제거 목적
+        this._pulseMeshes = null; // 펄스 대상 목록 초기화, 메모리 해제
+    }
+
+    // 현재 펄스 중인지 확인
+    isPulsing() {
+        return !!this._pulsing; // !! -> 강제로 true/false 변환, 객체지향(OOP)에서는 상태를 직접 접근하지 말고, 메서드를 통해 접근하게 만드는 것이 굉장히 중요하다.(펄스 상태의 내부 구현은 숨기고, 외부에서는 함수만 통해 안전하게 접근하게 만드는 구조.)
+    }
+
+    
+    // knobMesh라는 버튼/손잡이 오브젝트를 파란색으로 부드럽게 깜빡이게 만드는 코드.
+    update(deltaMs) {                        // update()는 보통 매 프레임마다 실행되는 함수, 만약 60fps라면 1초에 약 60번 실행됨
+        if (this._pulsing && this._pulseMeshes) {   //펄스 상태가 켜져 있고, knobMesh가 존재할 때만 실행(지금 반짝여도 되는 상태이고, 반짝일 물체도 있으면 실행)
+            const elapsed = (performance.now() - this._pulseStartTime) / 1000;  // (startPulse()가 실행됐던 시간 - 펄스가 시작된 뒤 지난 시간 ) /1000 => 초 단위 즉, (펄스 시작 후 몇 초가 지났는가)
+            const intensity = 0.2 + 0.25 * Math.sin(elapsed * Math.PI);  // Math.sim -> 부드럽게 위아래로 흔들어주는 함수 (0.3+0.3 * -1 = 0, 0.3+0.3 * 0 = 0.3, 0.3+0.3 * 1 = 0.6)
+
+            for (const m of this._pulseMeshes) {
+                if (!m.material) continue; // 안전장치: material이 없는 경우 건너뛰기
+
+                m.material.emissiveIntensity = intensity; // 계산된 밝기 적용
+            }
+        }
     }
 }
