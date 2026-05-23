@@ -10,6 +10,8 @@ import ThawingScene from './src/scenes/ThawingScene.js';
 import Sidebar from './src/ui/Sidebar.js';
 import ChapterNav from './src/ui/ChapterNav.js';
 import Tooltip from './src/ui/Tooltip.js';
+import StepController from './src/core/StepController.js';
+import { thawingSteps } from './src/scenes/steps/thawingSteps.js';
 
 function bootstrap() {
     const container = document.getElementById('webgl-container');
@@ -30,6 +32,33 @@ function bootstrap() {
     const chapterNav = new ChapterNav('#chapter-nav-mount');
     const tooltip = new Tooltip();
     const dialPanel = new DialPanel();
+
+    // 현재 Thaving Scene을 제어할
+    // StepController 생성
+    //
+    // StepController는:
+    // - 현재 step 관리
+    // - 애니메이션 재생 상태 관리
+    // - timeline 관리
+    // - UI 상태 notify
+    // 등을 담당한다.
+    const stepController = new StepController(thawing);
+
+    // Thawing 실험 step 시퀀스 등록
+    //
+    // thawingSteps 배열 안에는:
+    // - step ID
+    // - label
+    // - play(scene) 함수
+    // 등이 정의되어 있다.
+    //
+    // loadSteps()는
+    // - 기존 timeline 정리
+    // - step 목록 저장
+    // - currentIndex 초기화
+    // - UI 상태 갱신
+    // 등을 수행한다.
+    stepController.loadSteps(thawingSteps);
 
     // === 4) 인터랙션 ===
     const interaction = new InteractionController(
@@ -174,6 +203,7 @@ function bootstrap() {
         tooltip,
         dialPanel,
         interaction,
+        stepController,
         AppState,
         setChapter: (n) => AppState.set('chapter', n)
     };
