@@ -529,6 +529,81 @@
     font-weight: 600;
 }
 
+/* 스텝 컨트롤 (하단 중앙) */
+.step-control {
+    position: absolute;
+    bottom: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: var(--panel-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    border-radius: 14px;
+    padding: 12px 18px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+}
+
+.step-control.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.sc-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 180px;
+}
+
+.sc-progress {
+    font-size: 0.72rem;
+    color: #60a5fa;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.sc-label {
+    font-size: 0.85rem;
+    color: #f3f4f6;
+}
+
+.sc-next-btn {
+    background: linear-gradient(to right, #3b82f6, #6366f1);
+    border: none;
+    color: white;
+    padding: 10px 22px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    font-family: inherit;
+}
+
+.sc-next-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.4);
+}
+
+.sc-next-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sc-next-btn.playing {
+    opacity: 0.6;
+    cursor: wait;
+}
+
     </style>
 
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
@@ -565,6 +640,21 @@
             <!-- placeholder during initial paint -->
         </div>
     </div>
+
+    <!-- 스텝 컨트롤 (하단 중앙) -->
+    <!--
+    StepControl UI 장착 영역(mount point)
+
+    JavaScript에서 이 div를 가져와:
+    - Next 버튼
+    - 현재 Step 이름
+    - 진행률 표시
+    - Play/Pause 버튼
+    등의 UI를 동적으로 삽입한다.
+
+    현재는 빈 컨테이너 역할만 한다.
+     -->
+    <div class="step-control interactive" id="step-control-mount"></div>
 
     <footer>
         마우스 드래그: 회전 · 우클릭 드래그: 이동 · 휠: 확대/축소 · 객체에 마우스 올리면 정보 표시

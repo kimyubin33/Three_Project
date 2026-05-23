@@ -12,6 +12,7 @@ import ChapterNav from './src/ui/ChapterNav.js';
 import Tooltip from './src/ui/Tooltip.js';
 import StepController from './src/core/StepController.js';
 import { thawingSteps } from './src/scenes/steps/thawingSteps.js';
+import StepControl from './src/ui/StepControl.js';
 
 function bootstrap() {
     const container = document.getElementById('webgl-container');
@@ -59,6 +60,19 @@ function bootstrap() {
     // - UI 상태 갱신
     // 등을 수행한다.
     stepController.loadSteps(thawingSteps);
+
+    // StepControl UI 생성
+    //
+    // StepControl은:
+    // - 현재 step 진행 상태 표시
+    // - progress UI 표시
+    // - 현재 step label 표시
+    // - Next 버튼 처리
+    // 등을 담당한다.
+    //
+    // 전달된 StepController의 상태를 subscribe()로 감시하며,
+    // 상태가 변경될 때마다 자동으로 UI를 갱신한다.
+    const stepControl = new StepControl(stepController);
 
     // === 4) 인터랙션 ===
     const interaction = new InteractionController(
@@ -204,6 +218,7 @@ function bootstrap() {
         dialPanel,
         interaction,
         stepController,
+        stepControl,
         AppState,
         setChapter: (n) => AppState.set('chapter', n)
     };
