@@ -11,7 +11,7 @@ import Sidebar from './src/ui/Sidebar.js';
 import ChapterNav from './src/ui/ChapterNav.js';
 import Tooltip from './src/ui/Tooltip.js';
 import StepController from './src/core/StepController.js';
-import { thawingSteps } from './src/scenes/steps/thawingSteps.js';
+import { getStepsForChapter } from './src/scenes/steps/index.js';
 import StepControl from './src/ui/StepControl.js';
 
 function bootstrap() {
@@ -44,22 +44,6 @@ function bootstrap() {
     // - UI 상태 notify
     // 등을 담당한다.
     const stepController = new StepController(thawing);
-
-    // Thawing 실험 step 시퀀스 등록
-    //
-    // thawingSteps 배열 안에는:
-    // - step ID
-    // - label
-    // - play(scene) 함수
-    // 등이 정의되어 있다.
-    //
-    // loadSteps()는
-    // - 기존 timeline 정리
-    // - step 목록 저장
-    // - currentIndex 초기화
-    // - UI 상태 갱신
-    // 등을 수행한다.
-    stepController.loadSteps(thawingSteps);
 
     // StepControl UI 생성
     //
@@ -192,6 +176,8 @@ function bootstrap() {
             // 펄스(반짝이는 시각 힌트)를 시작한다.
             if(pip) pip.startPulse();
         }
+        // 6. 해당 챕터의 스텝 로드 (없으면 빈 배열 → 컨트롤 숨겨짐)
+        stepController.loadSteps(getStepsForChapter(chapterId));
     });
     
     AppState.set('chapter', 0);

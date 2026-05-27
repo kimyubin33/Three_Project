@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\.antigravitycli",
+    "\\assets",
+    "\\src",
+    "\\src\\core",
+    "\\src\\data",
+    "\\src\\objects",
+    "\\src\\scenes",
+    "\\src\\scenes\\steps",
+    "\\src\\ui"
+  ],
+  "SelectedNode": "\\package.json",
+  "PreviewInSolutionExplorer": false
+}
