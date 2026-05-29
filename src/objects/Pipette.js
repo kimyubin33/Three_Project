@@ -237,6 +237,244 @@ export default class Pipette extends THREE.Group {
         this._updateTargetState();
     }
 
+    /**
+     * 팁박스에서 팁을 꺼내 피펫 끝에 장착.
+     * @param {TipBox} tipBox - 팁을 꺼낼 박스
+     * @returns {boolean} 성공 여부
+     */
+    // 핵심 구조는 두 개이다.
+    // attachTip(tipBox) - 팁 장착
+    // detachTip - 팁 제거
+
+    // tipBox는 팁을 꺼낼 대상이다. 즉, 이전에 설명한 takeTip() 메서드를 가진 객체이다.
+    attachTip(tipBox) {
+        // 이미 팁이 장착되어 있는지 확인
+        // 피펫에는 한 번에 팁 하나만 장착할 수 있다.
+        // 그래서 이미 팁이 있다면 새 팁을 장착하지 않는다.
+        if (this.state.hasTip) {
+            console.warn(`[${this.type}] 이미 팁이 장착되어 있습니다. detachTip 먼저 호출하세요.`);
+            // "장착 실패"를 의미
+            return false;
+        }
+
+        // 실제로 팁박스 안의 팁 하나를 꺼낸다.
+        // takeTip()은 성공하면 이런 정보를 반환한다.
+        /*
+        {
+            worldPosition: worldPos,
+            color: tipColor,
+            radius: tipRadius,
+            height: tipHeight,
+            sourceIndex: index
+        }
+        */
+       // 남은 팁이 없으면 null을 반환한다.
+       // 그래서 if (!tipInfo) return false;
+       // 는 "팁박스에 남은 팁이 없으면 장착 실패"라는 뜻이다.
+        const tipInfo = tipBox.takeTip();
+        if (!tipInfo) return false;
+
+        // 새 팁 mesh 생성 (피펫 끝 콘에 씌워지는 형태)
+        // 여기서 피펫 끝에 붙일 새 팁 모양을 만든다.
+        // CylinderGeometry는 원기둥 또는 원뿔대 모양을 만드는 지오메트리이다.
+        // 인자는 대략 이렇게 이해하면 된다.
+        /* new THREE.CylinderGeometry(
+            윗면 반지름,
+            아랫면 반지름,
+            높이,
+            둘레 분할 수
+        )
+        */
+        const tipGeo = new THREE.CylinderGeometry(
+            // 윗부분 반지름이다. 피펫에 가까운 쪽이 더 넓다.
+            tipInfo.radius,
+            // 아랫부분 반지름이다. 끝부분이 훨씬 좁다.
+            // 그래서 모양은 완전한 원기둥이 아니라 아래로 갈수록 뾰족해지는 팁이다.
+            tipInfo.radius * 0.2,  // 끝은 더 뾰족
+            // 팁의 길이이다.
+            tipInfo.height,
+            // 원형을 몇 조각으로 나눌지 정한다. 값이 클수록 더 둥글지만 렌더링 비용도 조금 증가한다.
+            12
+        );
+        
+        // 팁 material 생성
+        const tipMat = new THREE.MeshPhysicalMaterial({
+            // 팁박스에서 꺼낸 팁 색상을 그대로 사용한다.
+            // 예를 들어 노란 팁이면 노란색, 파란 팁이면 파란색이 된다.
+            color: tipInfo.color,
+            // 투명 재질을 사용하겠다는 뜻이다.
+            transparent: true,
+            // 불투명도이다. 1.0이면 완전 불투명, 0.0이면 완전 투명이다.
+            // 0.55는 반투명에 가깝다.
+            opacity: 0.55,
+            // 표면 거칠기이다.
+            // 값이 낮을수록 매끈하고 반사가 조금 더 선명하다.
+            // 팁 플라스틱 느낌을 내기 위해 낮은 값을 준 것이다.
+            roughness: 0.2,
+            // 빛이 물체를 통과하는 정도.
+            // MeshPhysicalMaterial에서 유리나 투명 플라스틱 같은 느낌을 줄 때 사용한다.
+            transmission: 0.3,
+            // 투명 재질의 두께감을 설정한다.
+            // 즉, 이 재질은 "반투명한 플라스틱 피펫 팁"느낌을 내기 위한 설정이다.
+            thickness: 0.02
+        });
+
+        // Mesh 생성
+        // Geomeyry와 Material을 합쳐서 실제 화면에 보이는 Mesh를 만든다.
+        // Geometry = 모양
+        // Material = 표면 재질
+        // Mesh = 모양 + 재질이 합쳐진 실제 3D 물체
+        const tipMesh = new THREE.Mesh(tipGeo, tipMat);
+        // 그림자 설정
+        // 팁이 그림자를 만들 수 있게 한다.
+        tipMesh.castShadow = true;
+        // 팁이 다른 물체의 그림자를 받을 수 있게 한다.
+        tipMesh.receiveShadow = true;
+
+        // 피펫 끝 콘(tipConeMesh) 아래에 배치
+        // tipConeMesh의 로컬 y 위치는 -bodyHeight/2 - 0.18 - tipConeLength/2
+        // 팁은 그 아래에 더 길게 내려옴
+        // 이 부분이 가장 중요하다.
+        // 피펫 객체의 로컬 좌표계에서 y축 아래 방향에 팁을 배치한다.
+        // 보통 피펫 몸체가 중앙에 있고, 아래쪽에 tip cone이 있으며, 그 아래에 팁이 붙는다.
+        /*
+        구조를 그리면 대략 이렇다.
+        피펫 몸체
+            |
+            |
+        tip cone
+            |
+            |
+        pipette tip
+        */
+       // coneY는 피펫의 팁 콘 중심 위치이다.
+       // 각 항복을 나누면 -this.spec.bodyHeight / 2
+       // 피펫 몸체의 아래쪽 끝 위치이다.
+       // 피펫 몸체가 중심을 기준으로 만들어졌다면, 몸체 아래쪽은 -bodyHeight / 2이다.
+       // -0.18 몸체와 tip cone 사이의 추가 간격 또는 연결부 길이이다.
+       // -this.spec.tipConeLength / 2
+       // tip cone의 중심까지 내려가기 위한 거리이다.
+       /*
+        몸체 중심
+        ↓ bodyHeight / 2
+        몸체 아래쪽
+        ↓ 0.18
+        콘 시작 지점
+        ↓ tipConeLength / 2
+        콘 중심
+       */
+        const coneY = -this.spec.bodyHeight / 2 - 0.18 - this.spec.tipConeLength / 2;
+        // const tipY = coneY - this.spec.tipConeLength / 2 - tipInfo.height / 2 + 0.05;
+        // tipY는 새로 장착할 팁의 중심 위치이다.
+        // CylinderGeometry는 기본적으로 자기 중심이 원점이다.
+        // 즉, 높이가 tipInfo.height인 팁을 만들면:
+        // 팁의 위쪽 끝: +height / 2
+        // 팁의 중심: 0
+        // 팁의 아래쪽 끝: -height / 2
+        // 그래서 팁을 콘 아래에 붙이려면 팁의 중심을 적절히 아래로 내려야 한다.
+        // coneY
+        // tip cone의 중심 위치이다.
+        // -this.spec.tipConeLength / 2
+        // tip cone의 아래쪽 끝까지 내려간다.
+        // tipInfo.height / 2
+        // 팁의 중심이 오도록 팁 높이의 절반만큼 더 내려간다.
+        // +0.05
+        // 팁이 콘과 살짝 겹치게 하는 보정값이다.
+        // 이 값이 없으면 팁과 콘 사이에 미세한 틈이 생길 수 있다.
+        // 즉, +0.05는 시각적으로 "끼워진 느낌"을 만들기 위한 보정이다.
+        const tipY = coneY - this.spec.tipConeLength / 2 - tipInfo.height / 2 + 0.05;
+        tipMesh.position.set(0, tipY, 0);
+
+        // 피펫의 자식으로 추가 → 피펫 움직이면 팁도 자동으로 따라감
+        // 이 부분이 매우 중요하다.
+        // 팁을 씬에 직접 추가하는 것이 아니라, *피펫 객체의 자식*으로 추가한다.
+        // 즉 구조가 이렇게 된다.
+        /*
+        Pipette
+        ├─ bodyMesh
+        ├─ tipConeMesh
+        └─ attachedTip
+        */
+        // 이렇게 하면 피펫이 움직일 때 팁도 자동으로 따라 움직인다.
+        // 예를 들어 피펫을 오른쪽으로 이동하면:
+        // pipette.position.x +=1;
+        // 자식인 팁도 같이 오른쪽으로 이동한다.
+        // 피펫을 회전시켜도 팁도 같이 회전한다.
+        this.add(tipMesh);
+
+        // 상태 저장
+        // 이 부분은 "피펫에 팁이 장착되었다"는 상태를 저장한다.
+        // 현재 장착된 팁 Mesh를 저장한다.
+        // 나중에 제거할 때 필요하다.
+        this.attachedTip = tipMesh;
+        // 팁 정보도 저장한다.
+        // 어떤 색상, 어떤 크기, 어느 팁박스 index에서 온 팁인지 추적할 수 있다.
+        this.attachedTipInfo = tipInfo;
+        // 피펫이 현재 팁을 가지고 있다는 상태값이다.
+        // 이 값이 true가 되면 다음 attachTip() 호출은 실패한다.
+        this.state.hasTip = true;
+
+        // 모든 과정이 성공하면 true를 반환한다.
+        // 호출하는 쪽에서는 이렇게 쓸 수 있다.
+        /*
+        if (pipette.attachTip(tipBox)){
+            console.log('팁 장착 성공');
+        }
+        */
+        return true;
+    }
+
+    /**
+     * 장착된 팁을 제거. 씬에서 완전히 사라짐 (폐기 처리).
+     * @returns {boolean} 성공 여부
+     */
+    // 이 함수는 피펫에 장착된 팁을 제거한다.
+    // 즉, 팁을 다시 탑박스로 되돌리는 게 아니라 버리는 처리이다.
+    detachTip() {
+        // 팁이 없는데 제거하려고 하면 경고를 띄운다.
+        // 조건은 두 가지를 확인한다.
+        // !this.state.hasTip(상태상 팁이 없다고 되어 있는 경우)
+        // !this.attachedTip(실제 Mesh 참조가 없는 경우)
+        // 둘 중 하나라도 문제가 있으면 제거할 팁이 없다고 판단한다.
+        // 그리고: return false;로 실패를 반환한다.
+        if (!this.state.hasTip || !this.attachedTip) {
+            console.warn(`[${this.type}] 장착된 팁이 없습니다.`);
+            return false;
+        }
+
+        // 부모(this)에서 제거 + geometry/material 정리
+        // 피펫에서 팁 제거
+        // this는 피펫 객체이다.
+        // 앞에서 팁을 추가할 때: this.add(tipMesh); 로 피펫의 자식으로 추가했다.
+        // 따라서 제거할 때는: this.remove(this.attachedTip); 을 사용한다.
+        // 이렇게 하면 장착된 팁이 피펫의 자식 목록에 빠지고, 화면에서도 사라진다.
+        this.remove(this.attachedTip);
+        // Three.js에서는 Mesh를 씬에서 제거했다고 해서 GPU 메모리가 자동으로 완전히 정리되지 않는다.
+        // 특히 geometry와 material은 GPU 리소스를 가지고 있을 수 있다.
+        // 그래서 더 이상 사용하지 않는다면 직접 정리하는 것이 좋다.
+        // 팁의 모양 데이터 제거.
+        this.attachedTip.geometry.dispose();
+        //팁의 재질 데이터 제거.
+        // 이 과정은 메모리 누수를 막는 데 중요하다.
+        this.attachedTip.material.dispose();
+
+        // 내부 상태 초기화
+        // 팁을 제거했으므로 관련 정보를 비운다.
+        // 현재 장착된 팁 Mesh가 없다는 뜻이다.
+        this.attachedTip = null;
+        // 현재 장착된 팁 정보도 없다는 뜻이다.
+        this.attachedTipInfo = null;
+        // 피펫 상태를 "팁 없음"으로 바꾼다.
+        // 이제 다시 attachTip()을 호출할 수 있다.
+        this.state.hasTip = false;
+
+        // 제거 성공 반환
+        // 정상적으로 제거되면 true를 반환한다.
+        // 예를 들어: if (pipette.detachTip()) {console.log('팁 제거 성공');}
+        // 처럼 사용할 수 있다.
+        return true;
+    }
+
 _formatDisplayHtml(volume) {
         // P200: 표시값 = 실제 µL (예: 50 µL → "050")
         // P1000: 표시값 × 10 = 실제 µL (예: 500 µL → "050", 작은 "×10" 표기)

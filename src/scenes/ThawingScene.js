@@ -65,13 +65,13 @@ export default class ThawingScene {
         this.objects.iceBox = iceBox;
 
         const p200 = new Pipette('p200');
-        p200.position.set(3.5, 0.85, 0.8);
+        p200.position.set(3.5, 1.5, 0.8);
         p200.rotation.set(Math.PI / 14, 0, Math.PI / 18);
         this.scene.add(p200);
         this.objects.p200 = p200;
 
         const p1000 = new Pipette('p1000');
-        p1000.position.set(4.3, 0.9, -0.2);
+        p1000.position.set(4.3, 1.5, -0.2);
         p1000.rotation.set(Math.PI / 14, 0, -Math.PI / 18);
         this.scene.add(p1000);
         this.objects.p1000 = p1000;

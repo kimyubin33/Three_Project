@@ -48,7 +48,7 @@ export const CHAPTERS = [
         target: { pipetteType: 'p200', volume: 50 },
         focus: {
             cameraPosition: [3.5, 2.5, 3],
-            cameraTarget: [3.5, 1, 0.8],    // P200 위치
+            cameraTarget: [3.5, 1.5, 0.8],    // P200 위치
             ambientIntensity: 0.15,         // P200 위쪽 약간 앞에서
             spotLight: {
                 target: [3.5, 0.85, 0.8],
@@ -91,7 +91,7 @@ export const CHAPTERS = [
         target: { pipetteType: 'p1000', volume: 500 },
         focus: {
             cameraPosition: [4.3, 2.5, 2],
-            cameraTarget: [4.3, 1, -0.2],
+            cameraTarget: [4.3, 1.5, -0.2],
             ambientIntensity: 0.15,
             spotLight: {
                 target: [4.3, 0.9, -0.2],
