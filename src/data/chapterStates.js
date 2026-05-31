@@ -66,7 +66,11 @@ export const CHAPTERS = [
         name: 'plasmid-injection',
         title: 'Ch.3 Plasmid DNA 주입',
         description: '5 µL 플라스미드를 각 Competent Cell에 첨가하고 Tapping으로 혼합.',
-        implemented: false
+        implemented: true,
+        focus: {
+            cameraPosition: [0, 4, 5],
+            cameraTarget: [0, 0.8, 0]
+        }
     },
     {
         id: 4,

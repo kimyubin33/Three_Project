@@ -168,6 +168,10 @@ export default class StepController {
      */
     getState() {
 
+        // cur라는 변수에 현재 step 객체를 넣는다.
+        // this.currentIndex가 0 이상이면 현재 step이 시작된 상태이다.
+        const cur = this.currentIndex >= 0 ? this.steps[this.currentIndex] : null;
+
         // 현재 StepController 상태를 외부(UI 등)에 전달한다.
         // 상태 정보를 한 번에 객체 형태로 반환한다.
         return {
@@ -198,9 +202,11 @@ export default class StepController {
             // "DNA 시료 추가"
             //
             // 아직 시작 전이면 null 반환
-            currentLabel: this.currentIndex >= 0 && this.steps[this.currentIndex]
-                ? this.steps[this.currentIndex].label
-                : null,
+            currentLabel: cur ? cur.label : null,
+
+            // cur가 존재하면 cur.subtitle를 넣고,
+            // cur가 없으면 null을 넣는다.
+            currentSubtitle: cur ? (cur.subtitle || null) : null,
 
             // 다음 step이 남아 있는지 여부
             //

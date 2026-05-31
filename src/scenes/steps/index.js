@@ -12,6 +12,7 @@
 // export const thawingSteps = [...]
 // 로  export한 배열을 가져오는 것이다.
 // 즉, 메모리 상에는 형태의 배열 참조(reference)가 들어온다.
+import { injectionSteps } from './injectionSteps.js';
 import { thawingSteps } from './thawingSteps.js';
 
 // Registry Object 생성
@@ -30,8 +31,8 @@ import { thawingSteps } from './thawingSteps.js';
 //
 // 즉 내부적으로 chapter 번호를 key로 사용하여 step sequence를 조회하는 시스템이다.
 export const STEPS_BY_CHAPTER = {
-    1: thawingSteps
-    // 3: injectionSteps   ← Ch.3 만들면 추가 예정
+    1: thawingSteps,
+    3: injectionSteps
 };
 
 /**
