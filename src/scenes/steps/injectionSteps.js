@@ -8,6 +8,7 @@
 //   - 실험군(Tube3→Tube1)과 대조군(Tube4→Tube2)을 순차로 처리
 
 // GSAP는 애니메이션 라이브러리.
+import * as THREE from 'three';
 import gsap from 'gsap';
 
 // export는 이 배열을 다른 파일에서 가져다 쓸 수 있게 공개한다는 뜻이다.
@@ -57,6 +58,131 @@ export const injectionSteps = [
             // 끝나는지 알 수 있다.
             return tl;
         }
+    },
+    {
+     id: 'attach-tip-experimental',
+        label: 'P200에 새 팁 장착 (실험군용)',
+        subtitle: '교차오염 방지를 위해 매번 새 팁 사용',
+        play: (scene) => {
+            const p200 = scene.objects.p200;
+            const tipBoxYellow = scene.objects.tipBoxYellow;
+
+            // 피펫의 원래 위치/회전 기억 (복귀용)
+            const origPos = p200.position.clone();
+            const origRot = p200.rotation.clone();
+
+            // 팁박스 위쪽으로 이동할 위치 (팁박스 약간 위)
+            const tbWorld = new THREE.Vector3();
+            tipBoxYellow.getWorldPosition(tbWorld);
+            const aboveTipBox = { x: tbWorld.x, y: tbWorld.y + 1.5, z: tbWorld.z };
+            const intoTipBox = { x: tbWorld.x, y: tbWorld.y + 0.7, z: tbWorld.z };
+
+            const tl = gsap.timeline();
+
+            // 1) 피펫이 팁박스 위로 이동 (수직 자세로 회전 정리)
+            tl.to(p200.position, {
+                x: aboveTipBox.x, y: aboveTipBox.y, z: aboveTipBox.z,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+            tl.to(p200.rotation, {
+                x: 0, y: 0, z: 0,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+
+            // 2) 팁박스 안으로 내려가서 팁 장착
+            tl.to(p200.position, {
+                y: intoTipBox.y,
+                duration: 0.4, ease: 'power2.in'
+            });
+
+            // 3) attachTip 실행 (팁이 시각적으로 붙음)
+            tl.call(() => {
+                p200.attachTip(tipBoxYellow);
+            });
+
+            // 4) 피펫이 다시 위로 빠짐 (팁이 같이 따라옴)
+            tl.to(p200.position, {
+                y: aboveTipBox.y,
+                duration: 0.5, ease: 'power2.out'
+            });
+
+            // 5) 원래 위치/회전으로 복귀
+            tl.to(p200.position, {
+                x: origPos.x, y: origPos.y, z: origPos.z,
+                duration: 0.7, ease: 'power2.inOut'
+            });
+            tl.to(p200.rotation, {
+                x: origRot.x, y: origRot.y, z: origRot.z,
+                duration: 0.7, ease: 'power2.inOut'
+            }, '<');  // '<' = 직전 트윈과 동시 시작
+
+            return tl;
+        }
+    },
+    {
+        id: 'aspirate-plasmid-experimental',
+        label: 'Plasmid #1 흡입 (5 µL)',
+        subtitle: 'Tube 3에서 실험군용 Plasmid 5 µL 흡입',
+        play: (scene) => {
+            const p200 = scene.objects.p200;
+            const iceBox = scene.objects.iceBox;
+            const tube3 = iceBox.getTube('tube3');
+
+            const origPos = p200.position.clone();
+            const origRot = p200.rotation.clone();
+
+            // tube3의 월드 좌표 (이미 공중에 떠있는 상태)
+            const tube3World = new THREE.Vector3();
+            tube3.getWorldPosition(tube3World);
+
+            // 피펫이 tube3 위로 이동할 위치, 그리고 팁이 액체에 닿을 위치
+            const aboveTube = { x: tube3World.x, y: tube3World.y + 2.0, z: tube3World.z };
+            const intoTube = { x: tube3World.x, y: tube3World.y + 1.0, z: tube3World.z };
+
+            const tl = gsap.timeline();
+
+            // 1) 피펫이 tube3 위로 이동 + 수직 자세
+            tl.to(p200.position, {
+                x: aboveTube.x, y: aboveTube.y, z: aboveTube.z,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+            tl.to(p200.rotation, {
+                x: 0, y: 0, z: 0,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+
+            // 2) 팁이 액체에 잠기도록 내려감
+            tl.to(p200.position, {
+                y: intoTube.y,
+                duration: 0.5, ease: 'power2.in'
+            });
+
+            // 3) 흡입: Tube3 액체 감소 + 피펫 팁 안에 액체 생성
+            tl.call(() => {
+                tube3.changeLiquidVolume(-5);
+                p200.aspirate(0x88ddff, 5);
+            });
+
+            // 4) 흡입 시간 (시각적 여유)
+            tl.to({}, { duration: 0.5 });
+
+            // 5) 피펫 빠짐
+            tl.to(p200.position, {
+                y: aboveTube.y,
+                duration: 0.5, ease: 'power2.out'
+            });
+
+            // 6) 원래 위치/회전 복귀
+            tl.to(p200.position, {
+                x: origPos.x, y: origPos.y, z: origPos.z,
+                duration: 0.7, ease: 'power2.inOut'
+            });
+            tl.to(p200.rotation, {
+                x: origRot.x, y: origRot.y, z: origRot.z,
+                duration: 0.7, ease: 'power2.inOut'
+            }, '<');
+
+            return tl;
+        }
     }
-    // Step 2~12는 다음 묶음(3b, 3c, 3d)에서 추가
 ];

@@ -94,6 +94,19 @@ export default class MicroTube extends THREE.Group {
         this.add(liqBody);
 
         this.liquidMesh = liqBody;  // 나중에 액체량 변경할 때 참조용
+
+        // 액체 mesh와 현재량 추적 (외부에서 변경 가능)
+        // 튜브 안 액체를 표현하는 Mesh 객체와 액체 양 정보를 저장한다.
+        // 나중에 다른 클래스나 애니메이션에서 액체 양을 변경할 수 있다.
+        this.liquidConeMesh = liqCone;
+        this.liquidBodyMesh = liqBody;
+        // 초기 높이를 저장
+        // 액체가 절반 남았을 때, 현재높이 = 원래높이 x 비율을 계산해야 하기 때문.
+        this.liquidBodyBaseHeight = liquidHeight;
+        // 현재 액체량
+        this.currentLiquidVolume = this.config.volume;
+        // 최대 액체량
+        this.maxLiquidVolume = this.config.volume;  // 초기값을 최대로 간주
     }
 
     _buildLabelBand() {
@@ -104,9 +117,6 @@ export default class MicroTube extends THREE.Group {
             roughness: 0.6,
             metalness: 0.1
         });
-        const band = new THREE.Mesh(bandGeo, bandMat);
-        band.position.y = 0.105;
-        this.add(band);
     }
 
     _buildLid() {
@@ -136,6 +146,62 @@ export default class MicroTube extends THREE.Group {
         this.add(marker);
 
         this.lidMesh = lid;
+    }
+
+    /**
+     * 액체량을 µL 단위로 설정. 본체 부분 액체의 높이가 비례해서 변함.
+     * 원뿔 부분 액체는 항상 그대로 (튜브 끝에 모이는 액체 자국 표현).
+     */
+    // setLiquidVolume(microliters)는 매개변수
+    // microliters는 액체량을 마이크로리터 단위로 나타낸 값이다.
+    setLiquidVolume(microliters) {
+        // target 변수 = 수학. 최대값(0, microliters) 선택
+        // Math.max(0, -10) == 0
+        // 즉, 음수 액체량은 허용하지 않는다.
+        const target = Math.max(0, microliters);
+        // 현재 액체량 갱신
+        this.currentLiquidVolume = target;
+
+        // 액체 Mesh가 없으면 함수 종료
+        if (!this.liquidBodyMesh) return;
+
+        // 액체가 없는가 검사, target = 0 이면 조건 참
+        if (target <= 0) {
+            // 본체 부분 액체 완전히 숨김 (원뿔은 그대로 둠)
+            this.liquidBodyMesh.visible = false;
+            return;
+        }
+
+        // 최대량 대비 비율로 본체 액체 높이 계산
+        // 현재 100µL가 최대량이라면, target이 40µL일 때 ratio는 0.4가 된다.
+        // 40 / 100 = 0.4
+        const ratio = target / this.maxLiquidVolume;
+
+        // 둘 중 작은 값 선택, 절대 100%보다 커지지 않게 제한
+        // 음수로 내려가지 않는다. const target으로 변수 값에 제한을 뒀기 때문.
+        const newScale = Math.min(1, ratio);
+
+        // Y축 크기 배율이다. this니까 액체 본체 Mesh의 Y축 크기를 newScale로 조정한다.
+        this.liquidBodyMesh.visible = true;
+
+        // 액체 본체 Mesh의 Y축 크기를 newScale로 조정한다. 0.5면 절반 높이, 1이면 원래 높이.
+        this.liquidBodyMesh.scale.y = newScale;
+    }
+    /*
+    현재량 계신
+        ↓
+    setLiquidVolume 호출
+        ↓
+    비율 계산
+        ↓
+    Mesh 높이 변경
+    */
+
+    /**
+     * 액체를 일정량 더하거나 뺌 (음수면 제거).
+     */
+    changeLiquidVolume(deltaMicroliters) {
+        this.setLiquidVolume(this.currentLiquidVolume + deltaMicroliters);
     }
 
     /**

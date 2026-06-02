@@ -442,6 +442,8 @@ export default class Pipette extends THREE.Group {
             return false;
         }
 
+        if (this.attachedTipLiquid) this.dispense(); // 팁 안에 액체가 있으면 먼저 제거한다.
+
         // 부모(this)에서 제거 + geometry/material 정리
         // 피펫에서 팁 제거
         // this는 피펫 객체이다.
@@ -472,6 +474,114 @@ export default class Pipette extends THREE.Group {
         // 정상적으로 제거되면 true를 반환한다.
         // 예를 들어: if (pipette.detachTip()) {console.log('팁 제거 성공');}
         // 처럼 사용할 수 있다.
+        return true;
+    }
+
+    /**
+     * 팁 안에 액체를 표시. 흡입 동작의 결과물.
+     * 팁이 장착되어 있어야 호출 가능.
+     * @param {number} color - 액체 색상 (hex)
+     * @param {number} microliters - 부피
+     */
+    // AND 연산자. 팁이 없거나 팁이 장착되어 있지 않으면
+    // "팁이 없어 흡입 불가" 출력.
+    aspirate(color, microliters) {
+        if (!this.state.hasTip || !this.attachedTip) {
+            console.warn(`[${this.type}] 팁이 없어 흡입 불가`);
+            return false;
+        }
+
+        // 팁에 액체가 있다면 경고 출력(중첩 흡입 방지)
+        if (this.attachedTipLiquid) {
+            console.warn(`[${this.type}] 팁에 이미 액체 있음. dispense 먼저.`);
+            return false;
+        }
+
+        // 음수가 되어 오류가 될 수 있으므로 방지한다(clamp).
+        const targetVolume = Math.max(0, microliters);
+
+        if(targetVolume <= 0) {
+            console.warn(`[${this.type}] 흡입량이 0 이하입니다.`);
+            return false;
+        }
+
+        // 팁 형태에 맞춰 안쪽에 작은 실린더 형태로 액체 mesh 생성
+        // 현재 장착된 팁의 정보를 가져오고,
+        // 액체 반지름을 팁 반지름보다 조금 작게 만든다.
+        // 즉, 팁 반지름 > 액체 반지름
+        const tipInfo = this.attachedTipInfo;
+        const liqRadiusTop = tipInfo.radius * 0.8;
+        // 부피가 적으니 팁 길이의 일부만 채움 (시각적 비율)
+        // microliters가 100이어도 비율이 2가 되지 않게 막는다.
+        // 즉 최대값을 1로 제한한다.
+        const liqRadiusBottom = tipInfo.radius * 0.25; // 팁 끝부분은 더 좁으므로 액체도 더 좁게 표현한다.
+        const fillRatio = Math.min(1, microliters / 50);  // 50µL면 가득
+        // 액체 원기둥의 높이를 계산한다.
+        // 중요한 점은 액체가 팁 전체 높이를 채우는 것이 아니라
+        // 팁 길이의 최대 40%까지만 차도록 만든 것이다.
+        const liqHeight = Math.max(0.08, tipInfo.height * 0.6 * fillRatio);
+
+        // 액체 모양을 만든다.
+        // 여기서 위쪽 반지름은 liqRadius, 아래쪽 반지름은 liqRadius * 0.5로
+        // 완전한 원기둥이 아니라, 아래쪽이 조금 좁은 형태이다.
+        const liqGeo = new THREE.CylinderGeometry(liqRadiusTop, liqRadiusBottom, liqHeight, 12);
+        
+        // 액체 재질을 만든다.
+        // transparent: ture와 opacity: 0.85 때문에 약간 투명하게 보인다.
+        const liqMat = new THREE.MeshStandardMaterial({
+            color: color,
+            transparent: true,
+            opacity: 0.85,
+            roughness: 0.2
+        });
+
+        // Geometry와 Material을 합쳐서 실제 화면에 보이는 Mesh를 만든다.
+        const liqMesh = new THREE.Mesh(liqGeo, liqMat);
+        liqMesh.castShadow = true;
+
+        // 팁 안쪽 아래에 위치 (팁이 아래로 뾰족하므로 아래쪽에 액체가 모임)
+        liqMesh.position.copy(this.attachedTip.position);
+
+        // 액체 바닥이 팁 끝에 거의 닿도록 배치 (액체는 중력으로 아래에 모임)
+        // 팁 바닥 = tip.position.y - tipInfo.height / 2
+        // 액체 바닥 = liqMesh.position.y - liqHeight / 2
+        // 이 둘이 같아야 액체가 팁 끝에 닿는다.
+        const tipBottomLocal = -tipInfo.height / 2;
+
+        // 팁의 중심에서 액체의 중심까지 내려가는 거리 계산
+        liqMesh.position.y = this.attachedTip.position.y + tipBottomLocal + liqHeight / 2 + 0.01;
+
+        // 피펫 객체 안에 액체 Mesh를 추가한다.
+        this.add(liqMesh);
+
+        // 현재 액체 상태를 저장한다.
+        this.attachedTipLiquid = liqMesh;
+        this.state.aspiratedVolume = microliters;
+        this.state.aspiratedColor = color;
+        return true;
+    }
+
+    /**
+     * 팁 안 액체 제거 (주입 완료 등).
+     */
+    // 액체가 없으면 제거할 것이 없으므로 실패 처리한다.
+    dispense() {
+        if (!this.attachedTipLiquid) return false;
+
+        // 화면/객체 계층에서 액체 Mesh를 제거한다.
+        this.remove(this.attachedTipLiquid);
+
+        // 메모리에서 Geometry와 Material을 정리한다.
+        // Three.js에서는 Mesh를 씬에서 제거해도 GPU 메모리가 자동으로 완전히 정리되지 않는다.
+        // 특히 geometry와 material은 GPU 리소스를 가지고 있을 수 있다.
+        // 그래서 더 이상 사용하지 않는다면 직접 정리하는 것이 좋다.
+        this.attachedTipLiquid.geometry.dispose();
+        this.attachedTipLiquid.material.dispose();
+
+        // 액체 상태 초기화
+        this.attachedTipLiquid = null;
+        this.state.aspiratedVolume = 0;
+        this.state.aspiratedColor = null;
         return true;
     }
 
