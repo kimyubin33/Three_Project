@@ -117,6 +117,9 @@ export default class MicroTube extends THREE.Group {
             roughness: 0.6,
             metalness: 0.1
         });
+        const band = new THREE.Mesh(bandGeo, bandMat);
+        band.position.y = 0.105;
+        this.add(band);
     }
 
     _buildLid() {
