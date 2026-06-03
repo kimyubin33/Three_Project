@@ -184,5 +184,73 @@ export const injectionSteps = [
 
             return tl;
         }
+    },
+    {
+        id: 'discard-plasmid-tube3',
+        label: '빈 Plasmid #1 튜브 폐기',
+        subtitle: '사용 완료된 시료 튜브는 폐기',
+        play: (scene) => {
+            // 현재 씬에 존재하는 IceBox에서 tube3를 꺼낸다.
+            const iceBox = scene.objects.iceBox;
+            const tube3 = iceBox.getTube('tube3');
+
+            // GSAP Timeline 생성
+            const tl = gsap.timeline();
+
+            // 1) 화면 왼쪽 위(작업대 한쪽 끝)로 이동
+            tl.to(tube3.position, {
+                x: '-=4',
+                y: '+=0.3',
+                duration: 0.8,
+                ease: 'power2.inOut'
+            });
+
+            // 2) 페이드아웃 + 작아지기
+            //    튜브 내부의 모든 mesh에 opacity 적용해야 하므로 traverse 사용
+            tl.to(tube3.scale, {
+                x: 0.1, y: 0.1, z: 0.1,
+                duration: 0.5,
+                ease: 'power2.in'
+            });
+
+            // 3) 완전히 화면에서 제거 (visible = false)
+            tl.call(() => {
+                tube3.visible = false;
+            });
+
+            return tl;
+        }
+    },
+    {
+        id: 'lift-tube1-experimental',
+        label: '실험군 Competent Cell 꺼내기',
+        subtitle: '주입 직전 잠깐 꺼냄 — 노출 시간 최소화',
+        play: (scene) => {
+            const iceBox = scene.objects.iceBox;
+            const tube1 = iceBox.getTube('tube1');
+            const tube3 = iceBox.getTube('tube3');   // 위치 참조용 (이미 폐기됐지만 좌표는 보존)
+
+            const tl = gsap.timeline();
+
+            // Tube3가 떠있던 위치 근처로 Tube1을 올림
+            // Tube3는 Step 1에서 y +1.5 올라갔다가 Step 4에서 옆으로 폐기됨
+            // 즉 "Plasmid가 있던 영역"의 y 높이 = 원래 y + 1.5
+            // Tube1을 그 옆자리에 두면 자연스러움
+            tl.to(tube1.position, {
+                y: '+=1.5',
+                duration: 0.7,
+                ease: 'power2.out'
+            });
+
+            // Tube1이 비스듬히 박혀있던 회전을 똑바로 정리
+            tl.to(tube1.rotation, {
+                x: 0, y: 0, z: 0,
+                duration: 0.7,
+                ease: 'power2.inOut'
+                // GSAP의 Position Parameter이다. '<'는 직전 트윈과 동시 시작하라는 뜻이다.
+            }, '<');  // 위 트윈과 동시 시작
+
+            return tl;
+        }
     }
 ];
