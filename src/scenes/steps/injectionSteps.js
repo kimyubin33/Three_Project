@@ -342,7 +342,9 @@ export const injectionSteps = [
             //    Math.PI/36 ≈ 5도
             // Three.js 회전값은 도(degree)가 아니라 라디안(radian)을 쓴다.
             const tapAngle = Math.PI / 36;
-            const tapDur = 0.15;
+            const tapDur = 0.3;
+            tl.to(tube1.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube1.rotation, { z: -tapAngle, duration: tapDur, ease: 'sine.inOut' });
             tl.to(tube1.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
             tl.to(tube1.rotation, { z: -tapAngle, duration: tapDur, ease: 'sine.inOut' });
             tl.to(tube1.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
@@ -352,24 +354,36 @@ export const injectionSteps = [
         }
     },
     {
-        id: 'eject-tip-experimental',
-        label: '사용한 팁 폐기',
-        subtitle: '이젝터 버튼으로 팁 제거 → 재사용 금지',
+        id: 'finalize-experimental',
+        label: '팁 폐기 + 실험군 아이스박스 복귀',
+        subtitle: '사용한 팁은 폐기, Competent Cell은 즉시 아이스박스로',
         play: (scene) => {
             const p200 = scene.objects.p200;
+            const iceBox = scene.objects.iceBox;
+            const tube1 = iceBox.getTube('tube1');
 
             const tl = gsap.timeline();
 
-            // 1) 잠깐 정지 (이젝터 버튼 누르는 순간 표현용)
-            tl.to({}, { duration: 0.3 });
-
-            // 2) 팁 제거 (즉시 사라짐)
+            // 1) 팁 제거 (즉시) + Tube1 복귀 시작 (동시 진행)
             tl.call(() => {
                 p200.detachTip();
             });
 
-            // 3) 짧은 대기 (다음 스텝과의 호흡)
-            tl.to({}, { duration: 0.3 });
+            // 2) Tube1을 원래 자리(아이스박스 슬롯)로 이동
+            //    원위치: (-0.8, 0.75, -0.3), 회전: (0.05, 0.1, -0.08)
+            tl.to(tube1.position, {
+                x: -0.8, y: 0.75, z: -0.3,
+                duration: 1.2,
+                ease: 'power2.inOut'
+            }, 0);  // ← 위 call과 동시 시작
+            tl.to(tube1.rotation, {
+                x: 0.05, y: 0.1, z: -0.08,
+                duration: 1.2,
+                ease: 'power2.inOut'
+            }, 0);
+
+            // 3) 자막 읽고 결과 인지할 시간
+            tl.to({}, { duration: 0.5 });
 
             return tl;
         }
