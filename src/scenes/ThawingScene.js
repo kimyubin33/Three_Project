@@ -6,6 +6,7 @@ import IceBox from '../objects/IceBox.js';
 import Pipette from '../objects/Pipette.js';
 import TipBox from '../objects/TipBox.js';
 import HeatingBlock from '../objects/HeatingBlock.js';
+import ShakingIncubator from '../objects/ShakingIncubator.js';
 
 export default class ThawingScene {
     constructor() {
@@ -92,6 +93,13 @@ export default class ThawingScene {
         heatingBlock.position.set(0, 0, -3.2);
         this.scene.add(heatingBlock);
         this.objects.heatingBlock = heatingBlock;
+
+        // === Shaking Incubator (좌측 뒤 구석) ===
+        const shakingIncubator = new ShakingIncubator();
+        shakingIncubator.position.set(-5, 0, -3);
+        shakingIncubator.rotation.y = Math.PI / 8;   // 살짝 안쪽을 향하게
+        this.scene.add(shakingIncubator);
+        this.objects.shakingIncubator = shakingIncubator;
     }
 
     /**
@@ -128,6 +136,17 @@ export default class ThawingScene {
             meshes: hbMeshes,
             displayName: 'Heating Block (히팅블록)',
             displayRole: '42°C 열충격용 건식 항온기'
+        });
+        // 진탕 배양기
+        const si = this.objects.shakingIncubator;
+        const siMeshes = [];
+        si.traverse((c) => { if (c.isMesh) siMeshes.push(c); });
+        targets.push({
+            type: 'shakingIncubator',
+            root: si,
+            meshes: siMeshes,
+            displayName: 'Shaking Incubator (진탕 배양기)',
+            displayRole: '37°C / 250 rpm 진탕 배양'
         });
         }
         

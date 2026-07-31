@@ -111,8 +111,12 @@ export const CHAPTERS = [
         id: 7,
         name: 'shaking',
         title: 'Ch.7 Shaking Incubation',
-        description: '라벨링 → 분주 → 스프레더 도말 → 파라필름 밀봉.',
-        implemented: false
+        description: '37°C · 250 rpm · 1시간 진탕 배양으로 세포를 회복시킵니다.',
+        implemented: true,
+        focus: {
+            cameraPosition: [0, 5, 6],
+            cameraTarget: [-4, 1.2, -2.5]
+        }
     },
     {
         id: 9,
