@@ -14,6 +14,7 @@ import StepController from './src/core/StepController.js';
 import { getStepsForChapter } from './src/scenes/steps/index.js';
 import StepControl from './src/ui/StepControl.js';
 import Subtitle from './src/ui/Subtitle.js';
+import TimerDisplay from './src/ui/TimerDisplay.js';
 
 function bootstrap() {
     const container = document.getElementById('webgl-container');
@@ -62,20 +63,21 @@ function bootstrap() {
         // 클래스의 인스턴스(객체)를 생성한다.
     // 화면 아래쪽 자막 UI를 관리하는 객체이다.
     const subtitle = new Subtitle();
-    // StepController에 구독 등록
-    // StepController 상태가 변경될 때마다 실행할 함수를 등록한다.
-    // 즉, subscribe()는 "상태가 바뀌면 이 함수 호출해주세요." 라는 뜻이다.
-    // state 객체, 콜백 안의 state는 StepController가 전달하는 현재 상태이다.
+    const timerDisplay = new TimerDisplay();
+
     stepController.subscribe((state) => {
-        // 조건 검사
-        // 현재 애니메이션 재생 중인지, 현재 Step에 자막이 존재하는지
-        // && AND 연산자는 둘 다 참이어야 참이다.
+        // 자막
         if (state.isPlaying && state.currentSubtitle) {
-            // 조건이 참일 때 자막을 표시한다.
             subtitle.show(state.currentSubtitle);
-            // 조건이 거짓이면 실행된다.
         } else {
             subtitle.hide();
+        }
+
+        // 타이머 (스텝에 timer 정보가 있으면 시작)
+        if (state.isPlaying && state.currentTimer) {
+            timerDisplay.start(state.currentTimer);
+        } else if (!state.isPlaying) {
+            timerDisplay.hide();
         }
     });
 

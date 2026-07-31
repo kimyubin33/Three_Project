@@ -76,8 +76,12 @@ export const CHAPTERS = [
         id: 4,
         name: 'ice-incubation',
         title: 'Ch.4 Ice Incubation (30분)',
-        description: '얼음에 꽂아 30분간 반응시킵니다.',
-        implemented: false
+        description: '형질전환 반응을 위해 얼음 위에서 30분간 정치합니다.',
+        implemented: true,
+        focus: {
+            cameraPosition: [0, 4, 5],
+            cameraTarget: [0, 0.8, 0]
+        }
     },
     {
         id: 5,

@@ -215,6 +215,7 @@ export default class StepController {
             //
             // false:
             // 현재 마지막 step
+            currentTimer: cur ? (cur.timer || null) : null,
             hasNext: this.currentIndex < this.steps.length - 1,
 
             // 전체 step 완료 여부
