@@ -25,6 +25,9 @@ export default class StepControl {
             console.error(`StepControl: mount "${mountSelector}" not found`);
             return;
         }
+        
+        this._locked = false;
+        this._lockReason = '';
 
         // StepControl UI 생성
         //
@@ -78,83 +81,57 @@ export default class StepControl {
     }
 
     _update(state) {
-
-        // state가 없거나
-        // 현재 챕터에 step이 없는 경우
-        // StepControl UI 숨김
+        // 스텝이 없는 챕터면 컨트롤 숨김
         if (!state || state.total === 0) {
-
-            // visibel class 제거
-            // -> opacity:0
-            // -> 클릭 비활성화
             this.mount.classList.remove('visible');
             return;
         }
-
-        // step이 존재하면 UI 표시
         this.mount.classList.add('visible');
 
-        // 현재 진행 step 번호 계산
-        //
-        // currentIndex:
-        // -1 -> 아직 시작 안 함
-        // 0 -> 첫 번째 step
-        // UI 표시용으로 +1 처리
-        // 진행 표시: 아직 시작 안 했으면 "0 / N", 진행 중이면 "k / N"
-        const shown = state.currentIndex + 1;  // -1 → 0, 0 → 1 ...
-
-        // 잰행 상태 텍스트 갱신
-        //
-        // 예:
-        // STEP 2 / 5
+        const shown = state.currentIndex + 1;
         this.progressEl.textContent = `STEP ${Math.max(0, shown)} / ${state.total}`;
 
-        // 현재 step label 표시
         if (state.currentLabel) {
-
-            // 현재 step 이름 표시
             this.labelEl.textContent = state.currentLabel;
         } else {
-
-            // 아직 시작 전 기본 메시지
             this.labelEl.textContent = '단계를 시작하세요';
         }
 
-        // 버튼 상태 갱신
+        // 버튼 상태 결정
         if (state.isPlaying) {
-
-            // 현재 애니메이션 재생 중 상태
             this.nextBtn.textContent = '재생 중…';
-
-            // playing CSS class 추가
             this.nextBtn.classList.add('playing');
-
-            // 중복 클릭 방지
+            this.nextBtn.classList.remove('locked');
             this.nextBtn.disabled = true;
-
-
         } else if (state.isComplete) {
-
-            // 모든 step 완료 상태
             this.nextBtn.textContent = '완료됨 ✓';
-
-            // playing class 제거
-            this.nextBtn.classList.remove('playing');
-
-            // 더 이상 진행 불가
+            this.nextBtn.classList.remove('playing', 'locked');
             this.nextBtn.disabled = true;
-
-            
-        } else {
-
-            // 일반 대기 상태
-            this.nextBtn.textContent = '다음 ›';
-
-            // playing class 제거
+        } else if (this._locked) {
+            // 게이팅에 걸린 상태
+            this.nextBtn.textContent = '🔒 잠김';
+            this.nextBtn.classList.add('locked');
             this.nextBtn.classList.remove('playing');
-
-            // 버튼 활성화
+            this.nextBtn.disabled = true;
+            if (this._lockReason) {
+                this.labelEl.textContent = this._lockReason;
+            }
+        } else {
+            this.nextBtn.textContent = '다음 ›';
+            this.nextBtn.classList.remove('playing', 'locked');
             this.nextBtn.disabled = false;
         }
+    }
+    /**
+     * 외부에서 게이팅 상태를 설정.
+     * @param {boolean} locked - 잠금 여부
+     * @param {string} reason - 잠금 안내 문구
+     */
+    setLocked(locked, reason = '') {
+        // 상태가 바뀔 때만 갱신
+        if (this._locked === locked && this._lockReason === reason) return;
+        this._locked = locked;
+        this._lockReason = reason;
+        this._update(this.stepController.getState());
     }
 }

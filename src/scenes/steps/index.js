@@ -2,12 +2,14 @@ import { thawingSteps } from './thawingSteps.js';
 import { injectionSteps } from './injectionSteps.js';
 import { iceIncubationSteps } from './iceIncubationSteps.js';
 import { heatShockSteps } from './heatShockSteps.js';
+import { socAdditionSteps } from './socAdditionSteps.js';
 
 export const STEPS_BY_CHAPTER = {
     1: thawingSteps,
     3: injectionSteps,
     4: iceIncubationSteps,
-    5: heatShockSteps
+    5: heatShockSteps,
+    6: socAdditionSteps
 };
 
 export function getStepsForChapter(chapterId) {

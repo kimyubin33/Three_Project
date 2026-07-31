@@ -214,6 +214,42 @@ function bootstrap() {
         }
     }, 400);
 
+    // === 게이팅 체크: 현재 챕터의 목표값이 충족됐는지 매 프레임 확인 ===
+    let lastGateState = null;
+    sceneManager.addUpdateCallback(() => {
+        const chapterId = AppState.get('chapter');
+        const ch = CHAPTERS.find(c => c.id === chapterId);
+
+        // 목표가 없는 챕터 → 잠금 해제
+        if (!ch || !ch.target) {
+            if (lastGateState !== 'unlocked') {
+                stepControl.setLocked(false);
+                lastGateState = 'unlocked';
+            }
+            return;
+        }
+
+        // 목표 피펫의 현재 볼륨과 목표값 비교
+        const pip = thawing.objects[ch.target.pipetteType];
+        if (!pip) return;
+
+        const matched = Math.round(pip.state.currentVolume) === ch.target.volume;
+        const gateKey = matched ? 'unlocked' : 'locked';
+
+        if (lastGateState !== gateKey) {
+            if (matched) {
+                stepControl.setLocked(false);
+            } else {
+                const pipName = ch.target.pipetteType === 'p200' ? 'P200' : 'P1000';
+                stepControl.setLocked(
+                    true,
+                    `먼저 ${pipName}을 ${ch.target.volume} µL로 설정하세요`
+                );
+            }
+            lastGateState = gateKey;
+        }
+    });
+
     // === 7) 렌더 루프 시작 ===
     sceneManager.start();
 

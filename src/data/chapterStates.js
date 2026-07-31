@@ -102,18 +102,9 @@ export const CHAPTERS = [
         implemented: false,
         target: { pipetteType: 'p1000', volume: 500 },
         focus: {
-            cameraPosition: [4.3, 2.5, 2],
-            cameraTarget: [4.3, 1.5, -0.2],
-            ambientIntensity: 0.15,
-            spotLight: {
-                target: [4.3, 0.9, -0.2],
-                position: [4.3, 4, 1],
-                color: 0xffffff,
-                intensity: 100,
-                angle: 0.3,
-                penumbra: 0.4,
-                distance: 8
-            }
+            cameraPosition: [2.5, 4, 5.5],
+            cameraTarget: [0.5, 1, 0.5],
+            ambientIntensity: 0.4
         }
     },
     {
