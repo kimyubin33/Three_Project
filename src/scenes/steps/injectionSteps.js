@@ -354,6 +354,171 @@ export const injectionSteps = [
         }
     },
     {
+        id: 'control-group-full',
+        label: '대조군 전체 처리 (자동 진행)',
+        subtitle: '대조군에도 동일한 과정을 자동으로 수행합니다 (약 18초)',
+        play: (scene) => {
+            const p200 = scene.objects.p200;
+            const tipBoxYellow = scene.objects.tipBoxYellow;
+            const iceBox = scene.objects.iceBox;
+            const tube4 = iceBox.getTube('tube4');
+            const tube2 = iceBox.getTube('tube2');
+
+            const origPos = p200.position.clone();
+            const origRot = p200.rotation.clone();
+
+            const tl = gsap.timeline();
+
+            // ============================================================
+            // [1/6] 노란 팁 장착
+            // ============================================================
+            const tbWorld = new THREE.Vector3();
+            tipBoxYellow.getWorldPosition(tbWorld);
+            const aboveTipBox = { x: tbWorld.x, y: tbWorld.y + 1.5, z: tbWorld.z };
+
+            tl.to(p200.position, {
+                x: aboveTipBox.x, y: aboveTipBox.y, z: aboveTipBox.z,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+            tl.to(p200.rotation, {
+                x: 0, y: 0, z: 0,
+                duration: 0.7, ease: 'power2.inOut'
+            }, 0);
+            tl.to(p200.position, {
+                y: tbWorld.y + 0.7,
+                duration: 0.4, ease: 'power2.in'
+            });
+            tl.call(() => p200.attachTip(tipBoxYellow));
+            tl.to(p200.position, {
+                y: aboveTipBox.y,
+                duration: 0.5, ease: 'power2.out'
+            });
+
+            // ============================================================
+            // [2/6] Tube4(Plasmid #2)에서 5µL 흡입
+            // ============================================================
+            const tube4World = new THREE.Vector3();
+            tube4.getWorldPosition(tube4World);
+            const aboveTube4 = { x: tube4World.x, y: tube4World.y + 2.0, z: tube4World.z };
+
+            tl.to(p200.position, {
+                x: aboveTube4.x, y: aboveTube4.y, z: aboveTube4.z,
+                duration: 0.7, ease: 'power2.inOut'
+            });
+            tl.to(p200.position, {
+                y: tube4World.y + 1.0,
+                duration: 0.5, ease: 'power2.in'
+            });
+            tl.call(() => {
+                tube4.changeLiquidVolume(-5);
+                p200.aspirate(0x66ff99, 5);
+            });
+            tl.to({}, { duration: 0.5 });
+            tl.to(p200.position, {
+                y: aboveTube4.y,
+                duration: 0.5, ease: 'power2.out'
+            });
+
+            // ============================================================
+            // [3/6] Tube4 폐기 (한쪽으로 이동 + 작아짐)
+            // ============================================================
+            tl.to(tube4.position, {
+                x: '-=4',
+                y: '+=0.3',
+                duration: 0.8, ease: 'power2.inOut'
+            });
+            tl.to(tube4.scale, {
+                x: 0.1, y: 0.1, z: 0.1,
+                duration: 0.5, ease: 'power2.in'
+            });
+            tl.call(() => { tube4.visible = false; });
+
+            // ============================================================
+            // [4/6] Tube2(대조군 Cell) 꺼내기
+            // ============================================================
+            tl.to(tube2.position, {
+                y: '+=1.5',
+                duration: 0.7, ease: 'power2.out'
+            });
+            tl.to(tube2.rotation, {
+                x: 0, y: 0, z: 0,
+                duration: 0.7, ease: 'power2.inOut'
+            }, '<');
+
+            // ============================================================
+            // [5/6] Tube2에 주입 + Tapping
+            // ============================================================
+            const tube2World = new THREE.Vector3();
+            // Tube2는 방금 들어올렸으니 좌표를 갱신해서 가져와야 함 → call 안에서 처리
+            tl.call(() => {
+                tube2.getWorldPosition(tube2World);
+            });
+
+            // 위 call이 끝난 직후의 좌표를 사용하는 트윈
+            tl.to(p200.position, {
+                x: () => tube2World.x,
+                y: () => tube2World.y + 2.0,
+                z: () => tube2World.z,
+                duration: 0.7, ease: 'power2.inOut'
+            });
+            tl.to(p200.position, {
+                y: () => tube2World.y + 1.0,
+                duration: 0.5, ease: 'power2.in'
+            });
+            tl.call(() => {
+                p200.dispense();
+                tube2.changeLiquidVolume(5);
+            });
+            tl.to({}, { duration: 0.3 });
+            tl.to(p200.position, {
+                y: () => tube2World.y + 2.0,
+                duration: 0.5, ease: 'power2.out'
+            });
+
+            // Tapping (6회 진동, 각 0.3초)
+            const tapAngle = Math.PI / 36;
+            const tapDur = 0.3;
+            tl.to(tube2.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube2.rotation, { z: -tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube2.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube2.rotation, { z: -tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube2.rotation, { z: tapAngle, duration: tapDur, ease: 'sine.inOut' });
+            tl.to(tube2.rotation, { z: 0, duration: tapDur, ease: 'sine.inOut' });
+
+            // ============================================================
+            // [6/6] 팁 폐기 + Tube2 원래 자리 복귀 + 피펫 원위치 (동시)
+            // ============================================================
+            const t6Start = tl.duration();   // 현재 타임라인 끝 시점 기록
+
+            tl.call(() => { p200.detachTip(); }, null, t6Start);
+
+            // Tube2 → 원위치 (-0.4, 0.75, 0.25), 회전 (-0.06, -0.05, 0.12)
+            tl.to(tube2.position, {
+                x: -0.4, y: 0.75, z: 0.25,
+                duration: 1.2, ease: 'power2.inOut'
+            }, t6Start);
+            tl.to(tube2.rotation, {
+                x: -0.06, y: -0.05, z: 0.12,
+                duration: 1.2, ease: 'power2.inOut'
+            }, t6Start);
+
+            // 피펫 원래 위치로 복귀 (동시)
+            tl.to(p200.position, {
+                x: origPos.x, y: origPos.y, z: origPos.z,
+                duration: 1.2, ease: 'power2.inOut'
+            }, t6Start);
+            tl.to(p200.rotation, {
+                x: origRot.x, y: origRot.y, z: origRot.z,
+                duration: 1.2, ease: 'power2.inOut'
+            }, t6Start);
+
+            // 끝 호흡
+            tl.to({}, { duration: 0.5 });
+
+            return tl;
+        }
+    },
+    {
         id: 'finalize-experimental',
         label: '팁 폐기 + 실험군 아이스박스 복귀',
         subtitle: '사용한 팁은 폐기, Competent Cell은 즉시 아이스박스로',
@@ -388,4 +553,5 @@ export const injectionSteps = [
             return tl;
         }
     }
+    
 ];
