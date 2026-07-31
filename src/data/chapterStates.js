@@ -86,9 +86,13 @@ export const CHAPTERS = [
     {
         id: 5,
         name: 'heat-shock',
-        title: 'Ch.5 Heat Shock (42°C, 45초)',
-        description: '히팅 블록에서 90초간 열충격 후 즉시 얼음으로 복귀.',
-        implemented: false
+        title: 'Ch.5 Heat Shock (42°C, 90초)',
+        description: '히팅 블록에서 42°C 90초 열충격 후 즉시 얼음으로 2분간 복귀.',
+        implemented: true,
+        focus: {
+            cameraPosition: [0, 4.5, 3],
+            cameraTarget: [0, 1, -1.5]
+        }
     },
     {
         id: 6,

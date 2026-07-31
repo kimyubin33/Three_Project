@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import IceBox from '../objects/IceBox.js';
 import Pipette from '../objects/Pipette.js';
 import TipBox from '../objects/TipBox.js';
+import HeatingBlock from '../objects/HeatingBlock.js';
 
 export default class ThawingScene {
     constructor() {
@@ -85,6 +86,12 @@ export default class ThawingScene {
         tipBoxBlue.position.set(-3.5, 0.25, 0.8);
         this.scene.add(tipBoxBlue);
         this.objects.tipBoxBlue = tipBoxBlue;
+
+        // === Heating Block (아이스박스 뒤쪽) ===
+        const heatingBlock = new HeatingBlock(42);
+        heatingBlock.position.set(0, 0, -3.2);
+        this.scene.add(heatingBlock);
+        this.objects.heatingBlock = heatingBlock;
     }
 
     /**
@@ -111,6 +118,17 @@ export default class ThawingScene {
                     ? '소량 정밀 분주 (50~200 µL)'
                     : '대용량 분주 (200~1000 µL)'
             });
+            // 히팅블록
+        const hb = this.objects.heatingBlock;
+        const hbMeshes = [];
+        hb.traverse((c) => { if (c.isMesh) hbMeshes.push(c); });
+        targets.push({
+            type: 'heatingBlock',
+            root: hb,
+            meshes: hbMeshes,
+            displayName: 'Heating Block (히팅블록)',
+            displayRole: '42°C 열충격용 건식 항온기'
+        });
         }
         
 
